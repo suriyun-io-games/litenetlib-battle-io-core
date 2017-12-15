@@ -144,7 +144,7 @@ public class BotEntity : CharacterEntity
         TempRigidbody.velocity = new Vector3(movementDir.x, TempRigidbody.velocity.y, movementDir.z);
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
-        TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, targetRotation, Time.deltaTime * turnSpeed);
+        TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
     }
 
     private bool IsReachedTargetPosition()
