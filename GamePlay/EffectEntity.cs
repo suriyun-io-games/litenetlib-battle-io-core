@@ -10,13 +10,36 @@ public class EffectEntity : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        if (lifeTime >= 0)
+            Destroy(gameObject, lifeTime);
+    }
+
+    private void OnEnable()
+    {
         var particles = GetComponentsInChildren<ParticleSystem>();
         foreach (var particle in particles)
+        {
             particle.Play();
+        }
         var audioSources = GetComponentsInChildren<AudioSource>();
         foreach (var audioSource in audioSources)
+        {
             audioSource.Play();
-        Destroy(gameObject, lifeTime);
+        }
+    }
+
+    private void OnDisable()
+    {
+        var particles = GetComponentsInChildren<ParticleSystem>();
+        foreach (var particle in particles)
+        {
+            particle.Stop();
+        }
+        var audioSources = GetComponentsInChildren<AudioSource>();
+        foreach (var audioSource in audioSources)
+        {
+            audioSource.Stop();
+        }
     }
 
     public static void PlayEffect(EffectEntity prefab, Transform transform)

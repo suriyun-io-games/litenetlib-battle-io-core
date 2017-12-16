@@ -5,6 +5,7 @@ using UnityEngine.Networking;
 
 public class PowerUpEntity : NetworkBehaviour
 {
+    public const float DestroyDelay = 1f;
     // We're going to respawn this power up so I decide to keep its prefab name to spawning when character triggered
     [HideInInspector]
     public string prefabName;
@@ -25,6 +26,7 @@ public class PowerUpEntity : NetworkBehaviour
     {
         if (isDead)
             return;
+
         var character = other.GetComponent<CharacterEntity>();
         if (character != null && character.Hp > 0)
         {
@@ -36,10 +38,24 @@ public class PowerUpEntity : NetworkBehaviour
                 character.Exp += Mathf.CeilToInt(exp * character.TotalExpRate);
                 if (changingWeapon != null)
                     character.ChangeWeapon(changingWeapon);
-                // Destroy this on all clients
-                NetworkServer.Destroy(gameObject);
-                GameplayManager.Singleton.SpawnPowerUp(prefabName);
             }
+            StartCoroutine(DestroyRoutine());
+        }
+    }
+
+    IEnumerator DestroyRoutine()
+    {
+        var renderers = GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            renderer.enabled = false;
+        }
+        yield return new WaitForSeconds(DestroyDelay);
+        // Destroy this on all clients
+        if (isServer)
+        {
+            NetworkServer.Destroy(gameObject);
+            GameplayManager.Singleton.SpawnPowerUp(prefabName);
         }
     }
 }
