@@ -495,6 +495,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         if (Hp <= 0 || isInvincible)
             return;
 
+        RpcDamageHit(attacker.netId);
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;
@@ -676,6 +677,26 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
                     ChangeWeapon(changingWeapon);
                 --statPoint;
             }
+        }
+    }
+
+    [ClientRpc]
+    public void RpcDamageHit(NetworkInstanceId attackerId)
+    {
+        CharacterEntity attacker = null;
+        GameObject attackerObject = null;
+        if (isServer)
+            attackerObject = NetworkServer.FindLocalObject(attackerId);
+        else
+            attackerObject = ClientScene.FindLocalObject(attackerId);
+        if (attackerObject != null)
+        {
+            attacker = attackerObject.GetComponent<CharacterEntity>();
+            if (attacker != null &&
+                attacker.weaponData != null &&
+                attacker.weaponData.damagePrefab != null &&
+                attacker.weaponData.damagePrefab.hitEffectPrefab != null)
+                EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
         }
     }
 

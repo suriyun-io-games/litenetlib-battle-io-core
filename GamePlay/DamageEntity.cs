@@ -162,8 +162,6 @@ public class DamageEntity : NetworkBehaviour
             if (target == null || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
                 continue;
             hitSomeAliveCharacter = true;
-            // Play hit effect
-            EffectEntity.PlayEffect(hitEffectPrefab, target.effectTransform);
             // Damage receiving calculation on server only
             if (isServer)
             {
