@@ -8,6 +8,9 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Rigidbody))]
 public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
 {
+    public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
+    public const byte RPC_EFFECT_DAMAGE_HIT = 1;
+    public const byte RPC_EFFECT_TRAP_HIT = 2;
     public static CharacterEntity Local { get; private set; }
     public Transform damageLaunchTransform;
     public Transform effectTransform;
@@ -364,6 +367,8 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             hpText.text = hp + "/" + TotalHp;
         if (levelText != null)
             levelText.text = level.ToString("N0");
+        if (isServer && Hp <= 0)
+            attackingActionId = -1;
         UpdateAnimation();
     }
 
@@ -475,7 +480,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             if (weaponData != null && characterModel != null)
             {
                 var animator = characterModel.TempAnimator;
-                if (animator != null)
+                if (animator != null && weaponData.AttackAnimations.ContainsKey(actionId))
                 {
                     // Play attack animation
                     var attackAnimation = weaponData.AttackAnimations[actionId];
@@ -509,7 +514,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         if (Hp <= 0 || isInvincible)
             return;
 
-        RpcDamageEffect(attacker.netId, DamageEntity.RPC_EFFECT_DAMAGE_HIT);
+        RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;
@@ -695,30 +700,39 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
     }
 
     [ClientRpc]
-    public void RpcDamageEffect(NetworkInstanceId attackerId, byte effectType)
+    public void RpcEffect(NetworkInstanceId triggerId, byte effectType)
     {
-        CharacterEntity attacker = null;
-        GameObject attackerObject = null;
+        GameObject triggerObject = null;
         if (isServer)
-            attackerObject = NetworkServer.FindLocalObject(attackerId);
+            triggerObject = NetworkServer.FindLocalObject(triggerId);
         else
-            attackerObject = ClientScene.FindLocalObject(attackerId);
-        if (attackerObject != null)
+            triggerObject = ClientScene.FindLocalObject(triggerId);
+
+        if (triggerObject != null)
         {
-            attacker = attackerObject.GetComponent<CharacterEntity>();
-            if (attacker != null &&
-                attacker.weaponData != null &&
-                attacker.weaponData.damagePrefab != null)
+            if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
             {
-                switch (effectType)
+                var attacker = triggerObject.GetComponent<CharacterEntity>();
+                if (attacker != null &&
+                    attacker.weaponData != null &&
+                    attacker.weaponData.damagePrefab != null)
                 {
-                    case DamageEntity.RPC_EFFECT_DAMAGE_SPAWN:
-                        EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.spawnEffectPrefab, effectTransform);
-                        break;
-                    case DamageEntity.RPC_EFFECT_DAMAGE_HIT:
-                        EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
-                        break;
+                    switch (effectType)
+                    {
+                        case RPC_EFFECT_DAMAGE_SPAWN:
+                            EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.spawnEffectPrefab, effectTransform);
+                            break;
+                        case RPC_EFFECT_DAMAGE_HIT:
+                            EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
+                            break;
+                    }
                 }
+            }
+            else if (effectType == RPC_EFFECT_TRAP_HIT)
+            {
+                var trap = triggerObject.GetComponent<TrapEntity>();
+                if (trap != null)
+                    EffectEntity.PlayEffect(trap.hitEffectPrefab, effectTransform);
             }
         }
     }

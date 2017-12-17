@@ -51,7 +51,7 @@ public class WeaponData : ItemData
             addRotationY += addingRotationY;
         }
 
-        attacker.RpcDamageEffect(attacker.netId, DamageEntity.RPC_EFFECT_DAMAGE_SPAWN);
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN);
     }
 
     public void SetupAnimations()

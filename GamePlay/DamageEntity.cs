@@ -6,8 +6,6 @@ using UnityEngine.Networking;
 [RequireComponent(typeof(Rigidbody))]
 public class DamageEntity : NetworkBehaviour
 {
-    public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
-    public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public EffectEntity spawnEffectPrefab;
     public EffectEntity explodeEffectPrefab;
     public EffectEntity hitEffectPrefab;
@@ -17,6 +15,7 @@ public class DamageEntity : NetworkBehaviour
     public float speed;
     public bool relateToAttacker;
     private bool isInitAttacker;
+    private bool isDead;
     /// <summary>
     /// We use this `attacketNetId` to let clients able to find `attacker` entity,
     /// This should be called only once when it spawn to reduce networking works
@@ -140,7 +139,8 @@ public class DamageEntity : NetworkBehaviour
 
     public override void OnNetworkDestroy()
     {
-        EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
+        if (!isDead)
+            EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
         base.OnNetworkDestroy();
     }
 
@@ -178,7 +178,19 @@ public class DamageEntity : NetworkBehaviour
             return;
         // Destroy this on all clients
         if (isServer)
+        {
             NetworkServer.Destroy(gameObject);
+        }
+        else if (!isDead)
+        {
+            EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
+            var renderers = GetComponentsInChildren<Renderer>();
+            foreach (var renderer in renderers)
+            {
+                renderer.enabled = false;
+            }
+            isDead = true;
+        }
     }
 
     public float GetAttackRange()

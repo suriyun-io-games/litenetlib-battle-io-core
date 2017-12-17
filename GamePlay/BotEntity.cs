@@ -102,6 +102,7 @@ public class BotEntity : CharacterEntity
         if (GameNetworkManager.Singleton.numPlayers <= 0)
         {
             TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+            attackingActionId = -1;
             return;
         }
 
