@@ -522,8 +522,11 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         Hp -= reduceHp;
         if (attacker != null)
         {
-            var leechHpAmount = Mathf.CeilToInt(attacker.TotalDamageRateLeechHp * reduceHp);
-            attacker.Hp += leechHpAmount;
+            if (attacker.Hp > 0)
+            {
+                var leechHpAmount = Mathf.CeilToInt(attacker.TotalDamageRateLeechHp * reduceHp);
+                attacker.Hp += leechHpAmount;
+            }
             if (Hp == 0)
                 attacker.KilledTarget(this);
         }
