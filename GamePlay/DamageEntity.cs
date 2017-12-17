@@ -6,6 +6,8 @@ using UnityEngine.Networking;
 [RequireComponent(typeof(Rigidbody))]
 public class DamageEntity : NetworkBehaviour
 {
+    public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
+    public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public EffectEntity spawnEffectPrefab;
     public EffectEntity explodeEffectPrefab;
     public EffectEntity hitEffectPrefab;
@@ -96,7 +98,6 @@ public class DamageEntity : NetworkBehaviour
         if (attacker == null || isInitAttacker)
             return;
         isInitAttacker = true;
-        EffectEntity.PlayEffect(spawnEffectPrefab, attacker.effectTransform);
         var damageLaunchTransform = attacker.damageLaunchTransform;
         if (relateToAttacker)
             TempTransform.SetParent(damageLaunchTransform);

@@ -12,11 +12,13 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
+    public GameObject[] localPlayerObjects;
     [Header("UI")]
     public Transform hpBarContainer;
     public Image hpFillImage;
     public Text hpText;
     public Text nameText;
+    public Text levelText;
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
@@ -303,6 +305,10 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             effectTransform = TempTransform;
         if (characterModelTransform == null)
             characterModelTransform = TempTransform;
+        foreach (var localPlayerObject in localPlayerObjects)
+        {
+            localPlayerObject.SetActive(false);
+        }
     }
 
     public override void OnStartClient()
@@ -334,6 +340,11 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         targetCamera = followCam.GetComponent<Camera>();
         GameplayManager.Singleton.uiGameplay.FadeOut();
 
+        foreach (var localPlayerObject in localPlayerObjects)
+        {
+            localPlayerObject.SetActive(true);
+        }
+
         CmdReady();
     }
 
@@ -351,6 +362,8 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             hpFillImage.fillAmount = (float)hp / (float)TotalHp;
         if (hpText != null)
             hpText.text = hp + "/" + TotalHp;
+        if (levelText != null)
+            levelText.text = level.ToString("N0");
         UpdateAnimation();
     }
 
@@ -468,15 +481,16 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
                     var attackAnimation = weaponData.AttackAnimations[actionId];
                     animator.SetBool("DoAction", true);
                     animator.SetInteger("ActionID", attackAnimation.actionId);
+                    var speed = attackAnimation.speed;
                     var animationDuration = attackAnimation.animationDuration;
                     var launchDuration = attackAnimation.launchDuration;
                     if (launchDuration > animationDuration)
                         launchDuration = animationDuration;
-                    yield return new WaitForSeconds(launchDuration);
+                    yield return new WaitForSeconds(launchDuration / speed);
                     // Launch damage entity on server only
                     if (isServer)
                         weaponData.Launch(this, TotalSpreadDamages);
-                    yield return new WaitForSeconds(animationDuration - launchDuration);
+                    yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
                     // Attack animation ended
                     animator.SetBool("DoAction", false);
                 }
@@ -495,7 +509,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         if (Hp <= 0 || isInvincible)
             return;
 
-        RpcDamageHit(attacker.netId);
+        RpcDamageEffect(attacker.netId, DamageEntity.RPC_EFFECT_DAMAGE_HIT);
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;
@@ -681,7 +695,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
     }
 
     [ClientRpc]
-    public void RpcDamageHit(NetworkInstanceId attackerId)
+    public void RpcDamageEffect(NetworkInstanceId attackerId, byte effectType)
     {
         CharacterEntity attacker = null;
         GameObject attackerObject = null;
@@ -694,9 +708,18 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             attacker = attackerObject.GetComponent<CharacterEntity>();
             if (attacker != null &&
                 attacker.weaponData != null &&
-                attacker.weaponData.damagePrefab != null &&
-                attacker.weaponData.damagePrefab.hitEffectPrefab != null)
-                EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
+                attacker.weaponData.damagePrefab != null)
+            {
+                switch (effectType)
+                {
+                    case DamageEntity.RPC_EFFECT_DAMAGE_SPAWN:
+                        EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.spawnEffectPrefab, effectTransform);
+                        break;
+                    case DamageEntity.RPC_EFFECT_DAMAGE_HIT:
+                        EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
+                        break;
+                }
+            }
         }
     }
 

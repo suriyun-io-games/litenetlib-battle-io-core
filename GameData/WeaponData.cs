@@ -12,13 +12,6 @@ public class WeaponData : ItemData
     public GameObject rightHandObject;
     public GameObject leftHandObject;
     public GameObject shieldObject;
-    [Range(0, 100)]
-    [System.Obsolete("This will be deprecated on next version, use WeaponData.attackAnimations instead")]
-    public int actionId;
-    [System.Obsolete("This will be deprecated on next version, use WeaponData.attackAnimations instead")]
-    public float animationDuration;
-    [System.Obsolete("This will be deprecated on next version, use WeaponData.attackAnimations instead")]
-    public float launchDuration;
     public List<AttackAnimation> attackAnimations;
     public DamageEntity damagePrefab;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
@@ -33,14 +26,14 @@ public class WeaponData : ItemData
         
         if (spread == 2)
         {
-            addRotationY = -45f;
-            addingRotationY = 90f;
+            addRotationY = -15f;
+            addingRotationY = 30f;
         }
 
         if (spread == 3)
         {
-            addRotationY = -90f;
-            addingRotationY = 90f;
+            addRotationY = -30f;
+            addingRotationY = 30f;
         }
 
         for (var i = 0; i < spread; ++i)
@@ -57,33 +50,9 @@ public class WeaponData : ItemData
             NetworkServer.Spawn(damageEntity.gameObject);
             addRotationY += addingRotationY;
         }
-    }
 
-#if UNITY_EDITOR
-    protected override void OnValidate()
-    {
-        base.OnValidate();
-
-        bool containId = false;
-        foreach (var attackAnimation in attackAnimations)
-        {
-            if (attackAnimation.actionId == actionId)
-            {
-                containId = true;
-                break;
-            }
-        }
-        if (!containId)
-        {
-            var newAnimation = new AttackAnimation();
-            newAnimation.actionId = actionId;
-            newAnimation.animationDuration = animationDuration;
-            newAnimation.launchDuration = launchDuration;
-            attackAnimations.Add(newAnimation);
-        }
-        EditorUtility.SetDirty(this);
+        attacker.RpcDamageEffect(attacker.netId, DamageEntity.RPC_EFFECT_DAMAGE_SPAWN);
     }
-#endif
 
     public void SetupAnimations()
     {
