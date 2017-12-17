@@ -13,6 +13,7 @@ public class TrapEntity : NetworkBehaviour
     public float moveSpeed = 10f;
     public float turnSpeed = 5f;
     public Transform[] moveWaypoints;
+    public readonly List<Transform> MoveWaypoints = new List<Transform>();
     public readonly Dictionary<NetworkInstanceId, float> TriggerredTime = new Dictionary<NetworkInstanceId, float>();
     private Vector3 targetPosition;
     private int currentWaypoint;
@@ -43,9 +44,15 @@ public class TrapEntity : NetworkBehaviour
     {
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
+        foreach (var moveWaypoint in moveWaypoints)
+        {
+            if (moveWaypoint == null)
+                continue;
+            MoveWaypoints.Add(moveWaypoint);
+        }
         currentWaypoint = 0;
-        if (moveWaypoints.Length > 0)
-            targetPosition = moveWaypoints[currentWaypoint].position;
+        if (MoveWaypoints.Count > 0)
+            targetPosition = MoveWaypoints[currentWaypoint].position;
     }
 
     private void Update()
@@ -53,7 +60,7 @@ public class TrapEntity : NetworkBehaviour
         if (!isServer)
             return;
 
-        if (moveWaypoints.Length <= 1)
+        if (MoveWaypoints.Count <= 1)
             return;
 
         if (IsReachedTargetPosition())
@@ -61,9 +68,9 @@ public class TrapEntity : NetworkBehaviour
             if (!isReversing)
             {
                 ++currentWaypoint;
-                if (currentWaypoint == moveWaypoints.Length)
+                if (currentWaypoint == MoveWaypoints.Count)
                 {
-                    currentWaypoint = moveWaypoints.Length - 1;
+                    currentWaypoint = MoveWaypoints.Count - 1;
                     isReversing = true;
                 }
             }
@@ -76,7 +83,7 @@ public class TrapEntity : NetworkBehaviour
                     isReversing = false;
                 }
             }
-            targetPosition = moveWaypoints[currentWaypoint].position;
+            targetPosition = MoveWaypoints[currentWaypoint].position;
         }
         // Gets a vector that points from the player's position to the target's.
         var heading = targetPosition - TempTransform.position;
