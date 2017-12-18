@@ -24,15 +24,9 @@ public class WeaponData : ItemData
         var addRotationY = 0f;
         var addingRotationY = 360f / spread;
         
-        if (spread == 2)
+        if (spread <= 16)
         {
-            addRotationY = -15f;
-            addingRotationY = 30f;
-        }
-
-        if (spread == 3)
-        {
-            addRotationY = -30f;
+            addRotationY = (-(spread - 1) * 15f);
             addingRotationY = 30f;
         }
 
@@ -45,8 +39,7 @@ public class WeaponData : ItemData
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            damageEntity.Attacker = attacker;
-            damageEntity.addRotationY = addRotationY;
+            damageEntity.InitAttacker(attacker, addRotationY);
             NetworkServer.Spawn(damageEntity.gameObject);
             addRotationY += addingRotationY;
         }

@@ -14,7 +14,6 @@ public class DamageEntity : NetworkBehaviour
     public float spawnForwardOffset;
     public float speed;
     public bool relateToAttacker;
-    private bool isInitAttacker;
     private bool isDead;
     /// <summary>
     /// We use this `attacketNetId` to let clients able to find `attacker` entity,
@@ -36,15 +35,6 @@ public class DamageEntity : NetworkBehaviour
                     attacker = go.GetComponent<CharacterEntity>();
             }
             return attacker;
-        }
-        set
-        {
-            if (value == null || !value.isServer)
-                return;
-
-            attacker = value;
-            attackerNetId = attacker.netId;
-            InitAttacker(attacker);
         }
     }
 
@@ -92,18 +82,39 @@ public class DamageEntity : NetworkBehaviour
         InitAttacker(Attacker);
     }
 
+    /// <summary>
+    /// This function will be called at client and server to set damage transform
+    /// </summary>
+    /// <param name="attacker"></param>
     private void InitAttacker(CharacterEntity attacker)
     {
-        if (attacker == null || isInitAttacker)
+        if (attacker == null)
             return;
-        isInitAttacker = true;
+        
         var damageLaunchTransform = attacker.damageLaunchTransform;
         if (relateToAttacker)
             TempTransform.SetParent(damageLaunchTransform);
+    }
+
+    /// <summary>
+    /// Init Attacker, this function must be call at server to init attacker
+    /// </summary>
+    /// <param name="addRotationY"></param>
+    public void InitAttacker(CharacterEntity attacker, float addRotationY)
+    {
+        if (attacker == null || !NetworkServer.active)
+            return;
+
+        this.attacker = attacker;
+        this.addRotationY = addRotationY;
+
+        attackerNetId = attacker.netId;
+        InitAttacker(attacker);
+
+        var damageLaunchTransform = attacker.damageLaunchTransform;
         var baseAngles = damageLaunchTransform.eulerAngles;
         TempTransform.rotation = Quaternion.Euler(baseAngles.x, baseAngles.y + addRotationY, baseAngles.z);
         TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
-        TempRigidbody.velocity = GetForwardVelocity();
     }
 
     private void FixedUpdate()
@@ -153,29 +164,29 @@ public class DamageEntity : NetworkBehaviour
         // Damage will not hit attacker, so avoid it
         if (otherCharacter != null && otherCharacter.netId.Value == attackerNetId.Value)
             return;
-
+        
         var hitSomeAliveCharacter = false;
-        Collider[] colliders = Physics.OverlapSphere(TempTransform.position, radius);
+        if (otherCharacter != null && otherCharacter.Hp > 0)
+        {
+            hitSomeAliveCharacter = true;
+            ApplyDamage(otherCharacter);
+        }
+
+        Collider[] colliders = Physics.OverlapSphere(TempTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
         for (int i = 0; i < colliders.Length; i++)
         {
             var target = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (target == null || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
+            if (target == null || target == otherCharacter || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
                 continue;
-            hitSomeAliveCharacter = true;
-            // Damage receiving calculation on server only
-            if (isServer)
-            {
-                var gameplayManager = GameplayManager.Singleton;
-                float damage = Attacker.TotalAttack;
-                damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
-                target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage));
-            }
 
+            hitSomeAliveCharacter = true;
+            ApplyDamage(target);
         }
         // If hit character (So it will not wall) but not hit alive character, don't destroy, let's find another target.
         if (otherCharacter != null && !hitSomeAliveCharacter)
             return;
+
         // Destroy this on all clients
         if (isServer)
         {
@@ -190,6 +201,24 @@ public class DamageEntity : NetworkBehaviour
                 renderer.enabled = false;
             }
             isDead = true;
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(TempTransform.position, radius);
+    }
+
+    private void ApplyDamage(CharacterEntity target)
+    {
+        // Damage receiving calculation on server only
+        if (isServer)
+        {
+            var gameplayManager = GameplayManager.Singleton;
+            float damage = Attacker.TotalAttack;
+            damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
+            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage));
         }
     }
 
