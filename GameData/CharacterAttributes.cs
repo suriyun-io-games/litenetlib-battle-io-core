@@ -5,6 +5,7 @@ using UnityEngine;
 public class CharacterAttributes : ScriptableObject
 {
     public string title;
+    [TextArea]
     public string description;
     public Texture icon;
     public CharacterStats stats;
