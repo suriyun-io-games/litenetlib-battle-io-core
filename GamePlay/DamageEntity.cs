@@ -93,7 +93,12 @@ public class DamageEntity : NetworkBehaviour
         
         var damageLaunchTransform = attacker.damageLaunchTransform;
         if (relateToAttacker)
+        {
             TempTransform.SetParent(damageLaunchTransform);
+            var baseAngles = damageLaunchTransform.eulerAngles;
+            TempTransform.rotation = Quaternion.Euler(baseAngles.x, baseAngles.y + addRotationY, baseAngles.z);
+            TempTransform.position = damageLaunchTransform.position + TempTransform.forward * spawnForwardOffset;
+        }
     }
 
     /// <summary>
