@@ -456,7 +456,7 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         {
             int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.y)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
             Quaternion targetRotation = Quaternion.Euler(0, newRotation, 0);
-            TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, targetRotation, Time.deltaTime * 5f);
+            TempTransform.rotation = targetRotation;
         }
     }
 
