@@ -177,7 +177,10 @@ public class GameplayManager : NetworkBehaviour
         ranking.score = character.Score;
         ranking.killCount = character.killCount;
         if (character.connectionToClient != null)
+        {
+            characters.Sort();
             TargetUpdateLocalRank(character.connectionToClient, characters.IndexOf(character) + 1, ranking);
+        }
     }
 
     [ClientRpc]

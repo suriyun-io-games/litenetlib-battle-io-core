@@ -353,6 +353,8 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
 
     private void Update()
     {
+        if (isServer && Hp <= 0)
+            attackingActionId = -1;
         if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
             isInvincible = false;
         if (invincibleEffect != null)
@@ -367,8 +369,6 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             hpText.text = hp + "/" + TotalHp;
         if (levelText != null)
             levelText.text = level.ToString("N0");
-        if (isServer && Hp <= 0)
-            attackingActionId = -1;
         UpdateAnimation();
     }
 
