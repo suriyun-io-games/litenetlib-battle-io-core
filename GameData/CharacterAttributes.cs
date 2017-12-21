@@ -8,6 +8,7 @@ public class CharacterAttributes : ScriptableObject
     [TextArea]
     public string description;
     public Texture icon;
+    public int randomWeight;
     public CharacterStats stats;
     public WeaponData changingWeapon;
 }
