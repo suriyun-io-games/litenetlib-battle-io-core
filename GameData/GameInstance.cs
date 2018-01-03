@@ -44,20 +44,20 @@ public class GameInstance : MonoBehaviour
         Heads.Clear();
         foreach (var head in heads)
         {
-            Heads.Add(head.GetId(), head);
+            Heads[head.GetId()] = head;
         }
 
         Characters.Clear();
         foreach (var characterModel in characters)
         {
-            Characters.Add(characterModel.GetId(), characterModel);
+            Characters[characterModel.GetId()] = characterModel;
         }
 
         Weapons.Clear();
         foreach (var weapon in weapons)
         {
             weapon.SetupAnimations();
-            Weapons.Add(weapon.GetId(), weapon);
+            Weapons[weapon.GetId()] = weapon;
             var damagePrefab = weapon.damagePrefab;
             if (damagePrefab != null && !ClientScene.prefabs.ContainsValue(damagePrefab.gameObject))
                 ClientScene.RegisterPrefab(damagePrefab.gameObject);
