@@ -48,7 +48,7 @@ public class BotEntity : CharacterEntity
             if (weaponData != null)
                 characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
         }
-        if (fixCharacterData != null)
+        else if (fixCharacterData != null)
         {
             selectCharacter = fixCharacterData.GetId();
             base.OnCharacterChanged(selectCharacter);
