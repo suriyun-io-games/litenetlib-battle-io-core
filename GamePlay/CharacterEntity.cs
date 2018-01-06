@@ -477,28 +477,28 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
         if (!isPlayingAttackAnim && Hp > 0)
         {
             isPlayingAttackAnim = true;
-            if (weaponData != null && characterModel != null)
+            if (weaponData != null &&
+                weaponData.AttackAnimations.ContainsKey(actionId) &&
+                characterModel != null &&
+                characterModel.TempAnimator != null)
             {
                 var animator = characterModel.TempAnimator;
-                if (animator != null && weaponData.AttackAnimations.ContainsKey(actionId))
-                {
-                    // Play attack animation
-                    var attackAnimation = weaponData.AttackAnimations[actionId];
-                    animator.SetBool("DoAction", true);
-                    animator.SetInteger("ActionID", attackAnimation.actionId);
-                    var speed = attackAnimation.speed;
-                    var animationDuration = attackAnimation.animationDuration;
-                    var launchDuration = attackAnimation.launchDuration;
-                    if (launchDuration > animationDuration)
-                        launchDuration = animationDuration;
-                    yield return new WaitForSeconds(launchDuration / speed);
-                    // Launch damage entity on server only
-                    if (isServer)
-                        weaponData.Launch(this, TotalSpreadDamages);
-                    yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
-                    // Attack animation ended
-                    animator.SetBool("DoAction", false);
-                }
+                // Play attack animation
+                var attackAnimation = weaponData.AttackAnimations[actionId];
+                animator.SetBool("DoAction", true);
+                animator.SetInteger("ActionID", attackAnimation.actionId);
+                var speed = attackAnimation.speed;
+                var animationDuration = attackAnimation.animationDuration;
+                var launchDuration = attackAnimation.launchDuration;
+                if (launchDuration > animationDuration)
+                    launchDuration = animationDuration;
+                yield return new WaitForSeconds(launchDuration / speed);
+                // Launch damage entity on server only
+                if (isServer)
+                    weaponData.Launch(this, TotalSpreadDamages);
+                yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
+                // Attack animation ended
+                animator.SetBool("DoAction", false);
             }
             // If player still attacking, random new attacking action id
             if (isServer && attackingActionId >= 0 && weaponData != null)
