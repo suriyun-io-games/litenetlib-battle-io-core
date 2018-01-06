@@ -720,13 +720,14 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
                     attacker.weaponData != null &&
                     attacker.weaponData.damagePrefab != null)
                 {
+                    var damagePrefab = attacker.weaponData.damagePrefab;
                     switch (effectType)
                     {
                         case RPC_EFFECT_DAMAGE_SPAWN:
-                            EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.spawnEffectPrefab, effectTransform);
+                            EffectEntity.PlayEffect(damagePrefab.spawnEffectPrefab, effectTransform);
                             break;
                         case RPC_EFFECT_DAMAGE_HIT:
-                            EffectEntity.PlayEffect(attacker.weaponData.damagePrefab.hitEffectPrefab, effectTransform);
+                            EffectEntity.PlayEffect(damagePrefab.hitEffectPrefab, effectTransform);
                             break;
                     }
                 }

@@ -196,6 +196,7 @@ public class DamageEntity : NetworkBehaviour
         if (isServer)
         {
             NetworkServer.Destroy(gameObject);
+            isDead = true;
         }
         else if (!isDead)
         {
