@@ -408,27 +408,38 @@ public class CharacterEntity : NetworkBehaviour, IComparable<CharacterEntity>
             StartCoroutine(AttackRoutine(attackingActionId));
     }
 
-    protected virtual void UpdateMovements()
+    protected virtual float GetMoveSpeed()
     {
-        if (!isLocalPlayer)
-            return;
+        return TotalMoveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
+    }
 
-        if (Hp <= 0)
-        {
-            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
-            return;
-        }
-
-        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
+    protected virtual void Move(Vector3 direction)
+    {
         if (direction.magnitude != 0)
         {
             if (direction.magnitude > 1)
                 direction = direction.normalized;
-            Vector3 movementDir = direction * TotalMoveSpeed * GameplayManager.REAL_MOVE_SPEED_RATE;
-            TempRigidbody.velocity = new Vector3(movementDir.x, TempRigidbody.velocity.y, movementDir.z);
+
+            var targetSpeed = GetMoveSpeed();
+            var targetVelocity = direction * targetSpeed;
+
+            // Apply a force that attempts to reach our target velocity
+            Vector3 velocity = TempRigidbody.velocity;
+            Vector3 velocityChange = (targetVelocity - velocity);
+            velocityChange.x = Mathf.Clamp(velocityChange.x, -targetSpeed, targetSpeed);
+            velocityChange.y = 0;
+            velocityChange.z = Mathf.Clamp(velocityChange.z, -targetSpeed, targetSpeed);
+            TempRigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
         }
-        else
-            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+    }
+
+    protected virtual void UpdateMovements()
+    {
+        if (!isLocalPlayer || Hp <= 0)
+            return;
+
+        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
+        Move(direction);
 
         if (Application.isMobilePlatform)
         {
