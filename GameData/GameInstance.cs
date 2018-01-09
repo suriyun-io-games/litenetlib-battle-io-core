@@ -64,6 +64,7 @@ public class GameInstance : MonoBehaviour
         }
 
         UpdateAvailableItems();
+        ValidatePlayerSave();
     }
 
     private void Start()
@@ -75,6 +76,21 @@ public class GameInstance : MonoBehaviour
             Debug.Log("Running as server in batch mode");
             GameNetworkManager.Singleton.StartDedicateServer();
         }
+    }
+
+    public void ValidatePlayerSave()
+    {
+        var head = PlayerSave.GetHead();
+        if (head < 0 || head >= AvailableHeads.Count)
+            PlayerSave.SetHead(0);
+
+        var character = PlayerSave.GetCharacter();
+        if (character < 0 || character >= AvailableCharacters.Count)
+            PlayerSave.SetCharacter(0);
+
+        var weapon = PlayerSave.GetWeapon();
+        if (weapon < 0 || weapon >= AvailableWeapons.Count)
+            PlayerSave.SetWeapon(0);
     }
 
     public void UpdateAvailableItems()
