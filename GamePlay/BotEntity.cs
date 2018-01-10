@@ -177,7 +177,7 @@ public class BotEntity : CharacterEntity
             isWallHit = true;
     }
 
-    protected override void OnSpawn()
+    public override void OnSpawn()
     {
         base.OnSpawn();
         addStats += startAddStats;

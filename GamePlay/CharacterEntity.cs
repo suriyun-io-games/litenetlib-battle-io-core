@@ -42,6 +42,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                     if (connectionToClient != null)
                         TargetDead(connectionToClient);
                     deathTime = Time.unscaledTime;
+                    ++dieCount;
                     isDead = true;
                 }
             }
@@ -587,7 +588,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         selectWeapon = weaponData.GetId();
     }
     
-    protected virtual void OnSpawn() { }
+    public virtual void OnSpawn() { }
 
     [Server]
     public void ServerInvincible()
@@ -599,43 +600,31 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerSpawn(bool isWatchedAds)
     {
-        var gameplayManager = GameplayManager.Singleton;
-        if (!isWatchedAds || watchAdsCount >= gameplayManager.watchAdsRespawnAvailable)
-            Reset();
-        else
+        if (Respawn(isWatchedAds))
         {
-            ++watchAdsCount;
-            isDead = false;
-            Hp = TotalHp;
+            var gameplayManager = GameplayManager.Singleton;
+            ServerInvincible();
+            OnSpawn();
+            var position = gameplayManager.GetCharacterSpawnPosition(this);
+            TempTransform.position = position;
+            if (connectionToClient != null)
+                TargetSpawn(connectionToClient, position);
+            ServerRevive();
         }
-        ServerInvincible();
-        OnSpawn();
-        var position = gameplayManager.GetCharacterSpawnPosition();
-        TempTransform.position = position;
-        if (connectionToClient != null)
-            TargetSpawn(connectionToClient, position);
     }
 
     [Server]
     public void ServerRespawn(bool isWatchedAds)
     {
-        var gameplayManager = GameplayManager.Singleton;
-        if (Time.unscaledTime - deathTime >= gameplayManager.respawnDuration)
+        if (CanRespawn(isWatchedAds))
             ServerSpawn(isWatchedAds);
     }
 
     [Server]
-    public void Reset()
+    public void ServerRevive()
     {
-        score = 0;
-        Exp = 0;
-        level = 1;
-        statPoint = 0;
-        killCount = 0;
-        watchAdsCount = 0;
-        addStats = new CharacterStats();
-        isDead = false;
         isPlayingAttackAnim = false;
+        isDead = false;
         Hp = TotalHp;
     }
 
@@ -728,13 +717,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [TargetRpc]
-    private void TargetDead(NetworkConnection conn)
+    public void TargetDead(NetworkConnection conn)
     {
         deathTime = Time.unscaledTime;
     }
 
     [TargetRpc]
-    private void TargetSpawn(NetworkConnection conn, Vector3 position)
+    public void TargetSpawn(NetworkConnection conn, Vector3 position)
     {
         transform.position = position;
     }
