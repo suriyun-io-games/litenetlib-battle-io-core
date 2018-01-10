@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 [RequireComponent(typeof(GameNetworkDiscovery))]
-public class GameNetworkManager : SimpleLanNetworkManager
+public class GameNetworkManager : BaseNetworkGameManager
 {
     public static new GameNetworkManager Singleton
     {
@@ -65,25 +65,23 @@ public class GameNetworkManager : SimpleLanNetworkManager
         }
     }
 
-    public override void OnServerAddPlayer(NetworkConnection conn, short playerControllerId, NetworkReader extraMessageReader)
+    protected override BaseNetworkGameCharacter NewCharacter(NetworkReader extraMessageReader)
     {
         var joinMessage = extraMessageReader.ReadMessage<JoinMessage>();
-        var characterObject = Instantiate(GameInstance.Singleton.characterPrefab.gameObject);
-        var character = characterObject.GetComponent<CharacterEntity>();
+        var character = Instantiate(GameInstance.Singleton.characterPrefab);
         character.Hp = character.TotalHp;
         character.playerName = joinMessage.playerName;
         character.selectHead = joinMessage.selectHead;
         character.selectCharacter = joinMessage.selectCharacter;
         character.selectWeapon = joinMessage.selectWeapon;
-        GameplayManager.Singleton.characters.Add(character);
-        NetworkServer.AddPlayerForConnection(conn, characterObject, playerControllerId);
+        return character;
     }
 
-    public override void OnServerDisconnect(NetworkConnection conn)
+    protected override void UpdateScores(NetworkGameScore[] scores)
     {
-        var character = conn.playerControllers[0].gameObject.GetComponent<CharacterEntity>();
-        GameplayManager.Singleton.characters.Remove(character);
-        NetworkServer.DestroyPlayersForConnection(conn);
+        var gameplayManager = GameplayManager.Singleton;
+        if (gameplayManager != null)
+            gameplayManager.uiGameplay.UpdateRankings(scores);
     }
 
     [System.Serializable]
