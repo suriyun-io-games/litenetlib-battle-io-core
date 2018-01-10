@@ -3,7 +3,7 @@ using UnityEngine.Networking;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
-    protected override void AddBot()
+    protected override BaseNetworkGameCharacter NewBot()
     {
         var gameInstance = GameInstance.Singleton;
         var botList = gameInstance.bots;
@@ -13,8 +13,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
         botEntity.selectWeapon = bot.GetSelectWeapon();
-        NetworkServer.Spawn(botEntity.gameObject);
-        GameplayManager.Singleton.characters.Add(botEntity);
+        return botEntity;
     }
 
     protected override void EndMatch()
