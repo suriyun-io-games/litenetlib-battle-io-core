@@ -23,7 +23,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
-
     [SyncVar]
     public int hp;
     public int Hp
