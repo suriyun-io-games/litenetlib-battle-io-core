@@ -27,10 +27,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         {
             // Ready/AddPlayer is usually triggered by a scene load completing. if no scene was loaded, then Ready/AddPlayer it here instead.
             ClientScene.Ready(conn);
-            if (autoCreatePlayer)
-            {
-                ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
-            }
+            ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
         }
     }
 
@@ -38,11 +35,6 @@ public class GameNetworkManager : BaseNetworkGameManager
     {
         // always become ready.
         ClientScene.Ready(conn);
-
-        if (!autoCreatePlayer)
-        {
-            return;
-        }
 
         bool addPlayer = (ClientScene.localPlayers.Count == 0);
         bool foundPlayer = false;
@@ -54,15 +46,12 @@ public class GameNetworkManager : BaseNetworkGameManager
                 break;
             }
         }
+        // there are players, but their game objects have all been deleted
         if (!foundPlayer)
-        {
-            // there are players, but their game objects have all been deleted
             addPlayer = true;
-        }
+
         if (addPlayer)
-        {
             ClientScene.AddPlayer(conn, 0, MakeJoinMessage());
-        }
     }
 
     protected override BaseNetworkGameCharacter NewCharacter(NetworkReader extraMessageReader)
