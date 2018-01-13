@@ -24,6 +24,7 @@ public class UIGameplay : MonoBehaviour
     public UINetworkGameScoreEntry localRanking;
     public GameObject[] mobileOnlyUis;
     public GameObject[] hidingIfDedicateServerUis;
+    private bool isNetworkActiveDirty;
     private bool isRespawnShown;
     private bool isRandomedAttributesShown;
     private bool canRandomAttributes;
@@ -34,12 +35,6 @@ public class UIGameplay : MonoBehaviour
         {
             mobileOnlyUi.SetActive(Application.isMobilePlatform);
         }
-        foreach (var hidingIfDedicateUi in hidingIfDedicateServerUis)
-        {
-            hidingIfDedicateUi.SetActive(!NetworkServer.active || NetworkServer.localClientActive);
-        }
-        if (NetworkServer.active)
-            FadeOut();
     }
 
     private void OnEnable()
@@ -56,6 +51,18 @@ public class UIGameplay : MonoBehaviour
 
     private void Update()
     {
+        var isNetworkActive = NetworkManager.singleton.isNetworkActive;
+        if (isNetworkActiveDirty != isNetworkActive)
+        {
+            foreach (var hidingIfDedicateUi in hidingIfDedicateServerUis)
+            {
+                hidingIfDedicateUi.SetActive(!NetworkServer.active || NetworkServer.localClientActive);
+            }
+            if (isNetworkActive)
+                FadeOut();
+            isNetworkActiveDirty = isNetworkActive;
+        }
+
         var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
         if (localCharacter == null)
             return;
