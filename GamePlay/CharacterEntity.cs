@@ -423,9 +423,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
 #if UNITY_EDITOR
         showJoystick = GameInstance.Singleton.showJoystickInEditor;
 #endif
+        InputManager.useMobileInputOnNonMobile = showJoystick;
         if (showJoystick)
         {
-            InputManager.useMobileInputOnNonMobile = true;
             direction = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
             Rotate(direction);
             if (direction.magnitude != 0)
@@ -435,7 +435,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         else
         {
-            InputManager.useMobileInputOnNonMobile = false;
             direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
             Rotate(direction);
             if (Input.GetMouseButton(0))
