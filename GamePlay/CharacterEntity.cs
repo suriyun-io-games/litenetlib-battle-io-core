@@ -14,6 +14,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public Transform effectTransform;
     public Transform characterModelTransform;
     public GameObject[] localPlayerObjects;
+    public float jumpHeight = 2f;
     [Header("UI")]
     public Transform hpBarContainer;
     public Image hpFillImage;
@@ -114,6 +115,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
+    public bool isGround { get; private set; }
     public bool isPlayingAttackAnim { get; private set; }
     public float deathTime { get; private set; }
     public float invincibleTime { get; private set; }
@@ -433,6 +435,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         else
         {
+            InputManager.useMobileInputOnNonMobile = false;
             direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
             Rotate(direction);
             if (Input.GetMouseButton(0))
@@ -440,6 +443,25 @@ public class CharacterEntity : BaseNetworkGameCharacter
             else
                 StopAttack();
         }
+
+        var velocity = TempRigidbody.velocity;
+        if (isGround && InputManager.GetButton("Jump"))
+        {
+            TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
+            isGround = false;
+        }
+    }
+
+    protected virtual void OnCollisionStay(Collision collision)
+    {
+        isGround = true;
+    }
+
+    protected float CalculateJumpVerticalSpeed()
+    {
+        // From the jump height and gravity we deduce the upwards speed 
+        // for the character to reach at the apex.
+        return Mathf.Sqrt(2f * jumpHeight * -Physics.gravity.y);
     }
 
     protected void Rotate(Vector2 direction)
