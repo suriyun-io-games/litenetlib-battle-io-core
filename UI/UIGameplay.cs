@@ -29,18 +29,6 @@ public class UIGameplay : MonoBehaviour
     private bool isRandomedAttributesShown;
     private bool canRandomAttributes;
 
-    private void Awake()
-    {
-        foreach (var mobileOnlyUi in mobileOnlyUis)
-        {
-#if UNITY_ANDROID || UNITY_IOS
-            mobileOnlyUi.SetActive(true);
-#else
-            mobileOnlyUi.SetActive(false);
-#endif
-        }
-    }
-
     private void OnEnable()
     {
         StartCoroutine(SetupCanRandomAttributes());
@@ -65,6 +53,15 @@ public class UIGameplay : MonoBehaviour
             if (isNetworkActive)
                 FadeOut();
             isNetworkActiveDirty = isNetworkActive;
+        }
+
+        foreach (var mobileOnlyUi in mobileOnlyUis)
+        {
+            bool showJoystick = Application.isMobilePlatform;
+#if UNITY_EDITOR
+            showJoystick = GameInstance.Singleton.showJoystickInEditor;
+#endif
+            mobileOnlyUi.SetActive(showJoystick);
         }
 
         var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
