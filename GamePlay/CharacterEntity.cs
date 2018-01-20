@@ -319,6 +319,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         targetCamera = followCam.GetComponent<Camera>();
         GameplayManager.Singleton.uiGameplay.FadeOut();
 
+        InputManager.useMobileInputOnNonMobile = true;
+
         foreach (var localPlayerObject in localPlayerObjects)
         {
             localPlayerObject.SetActive(true);
@@ -417,24 +419,21 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
         Move(direction);
 
-        if (Application.isMobilePlatform)
-        {
-            direction = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
-            Rotate(direction);
-            if (direction.magnitude != 0)
-                Attack();
-            else
-                StopAttack();
-        }
+#if UNITY_ANDROID || UNITY_IOS
+        direction = new Vector2(InputManager.GetAxis("Attack X", false), InputManager.GetAxis("Attack Y", false));
+        Rotate(direction);
+        if (direction.magnitude != 0)
+            Attack();
         else
-        {
-            direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
-            Rotate(direction);
-            if (Input.GetMouseButton(0))
-                Attack();
-            else
-                StopAttack();
-        }
+            StopAttack();
+#else
+        direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
+        Rotate(direction);
+        if (Input.GetMouseButton(0))
+            Attack();
+        else
+            StopAttack();
+#endif
     }
 
     protected void Rotate(Vector2 direction)
@@ -473,6 +472,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 weaponData.AttackAnimations.TryGetValue(actionId, out attackAnimation))
             {
                 // Play attack animation
+                animator.SetBool("DoAction", false);
+                yield return new WaitForEndOfFrame();
                 animator.SetBool("DoAction", true);
                 animator.SetInteger("ActionID", attackAnimation.actionId);
 

@@ -33,7 +33,11 @@ public class UIGameplay : MonoBehaviour
     {
         foreach (var mobileOnlyUi in mobileOnlyUis)
         {
-            mobileOnlyUi.SetActive(Application.isMobilePlatform);
+#if UNITY_ANDROID || UNITY_IOS
+            mobileOnlyUi.SetActive(true);
+#else
+            mobileOnlyUi.SetActive(false);
+#endif
         }
     }
 
