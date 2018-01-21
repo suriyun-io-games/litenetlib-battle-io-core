@@ -107,6 +107,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar]
     public CharacterStats addStats;
 
+    public override bool IsDead
+    {
+        get { return hp <= 0; }
+    }
+
     protected Camera targetCamera;
     protected CharacterModel characterModel;
     protected CharacterData characterData;
