@@ -63,6 +63,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         character.selectHead = joinMessage.selectHead;
         character.selectCharacter = joinMessage.selectCharacter;
         character.selectWeapon = joinMessage.selectWeapon;
+        character.extra = joinMessage.extra;
         return character;
     }
 
@@ -80,5 +81,6 @@ public class GameNetworkManager : BaseNetworkGameManager
         public string selectHead;
         public string selectCharacter;
         public string selectWeapon;
+        public string extra;
     }
 }

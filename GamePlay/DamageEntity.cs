@@ -9,6 +9,7 @@ public class DamageEntity : NetworkBehaviour
     public EffectEntity spawnEffectPrefab;
     public EffectEntity explodeEffectPrefab;
     public EffectEntity hitEffectPrefab;
+    public AudioClip[] hitFx;
     public float radius;
     public float lifeTime;
     public float spawnForwardOffset;
@@ -191,6 +192,13 @@ public class DamageEntity : NetworkBehaviour
         // If hit character (So it will not wall) but not hit alive character, don't destroy, let's find another target.
         if (otherCharacter != null && !hitSomeAliveCharacter)
             return;
+        
+        if (!isDead && hitSomeAliveCharacter)
+        {
+            // Play hit effect
+            if (hitFx != null && hitFx.Length > 0 && AudioManager.Singleton != null)
+                AudioSource.PlayClipAtPoint(hitFx[Random.Range(0, hitFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+        }
 
         // Destroy this on all clients
         if (isServer)

@@ -107,6 +107,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar]
     public CharacterStats addStats;
 
+    [SyncVar]
+    public string extra;
+
     public override bool IsDead
     {
         get { return hp <= 0; }
@@ -522,6 +525,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 // Launch damage entity on server only
                 if (isServer)
                     weaponData.Launch(this, TotalSpreadDamages);
+
+                // Random play shoot sounds
+                if (weaponData.attackFx != null && weaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
+                    AudioSource.PlayClipAtPoint(weaponData.attackFx[Random.Range(0, weaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
 
                 // Wait till animation end
                 yield return new WaitForSeconds((animationDuration - launchDuration) / speed);

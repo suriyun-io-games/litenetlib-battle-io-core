@@ -14,6 +14,8 @@ public class WeaponData : ItemData
     public GameObject shieldObject;
     public List<AttackAnimation> attackAnimations;
     public DamageEntity damagePrefab;
+    [Header("SFX")]
+    public AudioClip[] attackFx;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
     public void Launch(CharacterEntity attacker, int spread)
