@@ -59,6 +59,9 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         var ui = FindObjectOfType<UIGameplay>();
         if (ui == null && uiGameplayPrefab != null)
-            Instantiate(uiGameplayPrefab);
+        {
+            ui = Instantiate(uiGameplayPrefab);
+            ui.gameObject.SetActive(true);
+        }
     }
 }

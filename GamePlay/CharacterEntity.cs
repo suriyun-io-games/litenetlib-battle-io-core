@@ -149,17 +149,27 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    public CharacterStats SumAddStats
+    {
+        get
+        {
+            var stats = new CharacterStats();
+            stats += addStats;
+            if (headData != null)
+                stats += headData.stats;
+            if (characterData != null)
+                stats += characterData.stats;
+            if (weaponData != null)
+                stats += weaponData.stats;
+            return stats;
+        }
+    }
+
     public int TotalHp
     {
         get
         {
-            var total = GameplayManager.Singleton.minHp + addStats.addHp;
-            if (headData != null)
-                total += headData.stats.addHp;
-            if (characterData != null)
-                total += characterData.stats.addHp;
-            if (weaponData != null)
-                total += weaponData.stats.addHp;
+            var total = GameplayManager.Singleton.minHp + SumAddStats.addHp;
             return total;
         }
     }
@@ -168,13 +178,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.minAttack + addStats.addAttack;
-            if (headData != null)
-                total += headData.stats.addAttack;
-            if (characterData != null)
-                total += characterData.stats.addAttack;
-            if (weaponData != null)
-                total += weaponData.stats.addAttack;
+            var total = GameplayManager.Singleton.minAttack + SumAddStats.addAttack;
             return total;
         }
     }
@@ -183,13 +187,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.minDefend + addStats.addDefend;
-            if (headData != null)
-                total += headData.stats.addDefend;
-            if (characterData != null)
-                total += characterData.stats.addDefend;
-            if (weaponData != null)
-                total += weaponData.stats.addDefend;
+            var total = GameplayManager.Singleton.minDefend + SumAddStats.addDefend;
             return total;
         }
     }
@@ -198,13 +196,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = GameplayManager.Singleton.minMoveSpeed + addStats.addMoveSpeed;
-            if (headData != null)
-                total += headData.stats.addMoveSpeed;
-            if (characterData != null)
-                total += characterData.stats.addMoveSpeed;
-            if (weaponData != null)
-                total += weaponData.stats.addMoveSpeed;
+            var total = GameplayManager.Singleton.minMoveSpeed + SumAddStats.addMoveSpeed;
             return total;
         }
     }
@@ -213,13 +205,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addExpRate;
-            if (headData != null)
-                total += headData.stats.addExpRate;
-            if (characterData != null)
-                total += characterData.stats.addExpRate;
-            if (weaponData != null)
-                total += weaponData.stats.addExpRate;
+            var total = 1 + SumAddStats.addExpRate;
             return total;
         }
     }
@@ -228,13 +214,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addScoreRate;
-            if (headData != null)
-                total += headData.stats.addScoreRate;
-            if (characterData != null)
-                total += characterData.stats.addScoreRate;
-            if (weaponData != null)
-                total += weaponData.stats.addScoreRate;
+            var total = 1 + SumAddStats.addScoreRate;
             return total;
         }
     }
@@ -243,13 +223,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addHpRecoveryRate;
-            if (headData != null)
-                total += headData.stats.addHpRecoveryRate;
-            if (characterData != null)
-                total += characterData.stats.addHpRecoveryRate;
-            if (weaponData != null)
-                total += weaponData.stats.addHpRecoveryRate;
+            var total = 1 + SumAddStats.addHpRecoveryRate;
             return total;
         }
     }
@@ -258,13 +232,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = addStats.addDamageRateLeechHp;
-            if (headData != null)
-                total += headData.stats.addDamageRateLeechHp;
-            if (characterData != null)
-                total += characterData.stats.addDamageRateLeechHp;
-            if (weaponData != null)
-                total += weaponData.stats.addDamageRateLeechHp;
+            var total = SumAddStats.addDamageRateLeechHp;
             return total;
         }
     }
@@ -273,17 +241,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     {
         get
         {
-            var total = 1 + addStats.addSpreadDamages;
-            if (headData != null)
-                total += headData.stats.addSpreadDamages;
-            if (characterData != null)
-                total += characterData.stats.addSpreadDamages;
-            if (weaponData != null)
-                total += weaponData.stats.addSpreadDamages;
+            var total = 1 + SumAddStats.addSpreadDamages;
+
             var maxValue = GameplayManager.Singleton.maxSpreadDamages;
-            if (total > maxValue)
+            if (total < maxValue)
+                return total;
+            else
                 return maxValue;
-            return total;
         }
     }
 

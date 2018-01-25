@@ -49,9 +49,9 @@ public class GameInstance : BaseNetworkGameInstance
         }
 
         Characters.Clear();
-        foreach (var characterModel in characters)
+        foreach (var character in characters)
         {
-            Characters[characterModel.GetId()] = characterModel;
+            Characters[character.GetId()] = character;
         }
 
         Weapons.Clear();
