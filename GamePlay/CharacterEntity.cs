@@ -330,6 +330,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     private void FixedUpdate()
     {
+        if (NetworkManager != null && NetworkManager.IsMatchEnded)
+            return;
+
         UpdateMovements();
     }
 
