@@ -5,6 +5,7 @@ using UnityEngine;
 public class DeathMatchNetworkGameRule : IONetworkGameRule
 {
     public int endMatchCountDown = 10;
+    public int EndMatchCountingDown { get; protected set; }
 
     public override bool HasOptionMatchTime { get { return true; } }
 
@@ -17,11 +18,11 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
 
     IEnumerator EndMatchRoutine()
     {
-        var countDown = endMatchCountDown;
-        while (countDown > 0)
+        EndMatchCountingDown = endMatchCountDown;
+        while (EndMatchCountingDown > 0)
         {
             yield return new WaitForSeconds(1);
-            --countDown;
+            --EndMatchCountingDown;
         }
         networkManager.StopServer();
     }
