@@ -13,7 +13,7 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
 
     protected override void EndMatch()
     {
-
+        networkManager.StartCoroutine(EndMatchRoutine());
     }
 
     IEnumerator EndMatchRoutine()
@@ -24,7 +24,7 @@ public class DeathMatchNetworkGameRule : IONetworkGameRule
             yield return new WaitForSeconds(1);
             --EndMatchCountingDown;
         }
-        networkManager.StopServer();
+        networkManager.StopHost();
     }
 
     public override bool RespawnCharacter(BaseNetworkGameCharacter character, params object[] extraParams)
