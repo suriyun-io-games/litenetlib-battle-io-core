@@ -306,6 +306,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected override void Update()
     {
         base.Update();
+        if (NetworkManager != null && NetworkManager.IsMatchEnded)
+            return;
 
         if (isServer && Hp <= 0)
             attackingActionId = -1;
