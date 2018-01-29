@@ -16,6 +16,7 @@ public class UIGameplay : MonoBehaviour
     public Text textMoveSpeed;
     public Text textRespawnCountDown;
     public Text textWatchedAdsCount;
+    public Text textMatchCountDown;
     public UIBlackFade blackFade;
     public GameObject respawnUiContainer;
     public GameObject respawnButtonContainer;
@@ -140,6 +141,22 @@ public class UIGameplay : MonoBehaviour
             if (randomAttributes != null)
                 randomAttributes.gameObject.SetActive(false);
             isRandomedAttributesShown = false;
+        }
+
+        if (textMatchCountDown != null)
+        {
+            if (localCharacter.NetworkManager != null)
+            {
+                var formattedTime = string.Empty;
+                var timer = localCharacter.NetworkManager.RemainsMatchTime;
+                if (timer > 0f)
+                {
+                    int minutes = Mathf.FloorToInt(timer / 60f);
+                    int seconds = Mathf.FloorToInt(timer - minutes * 60);
+                    formattedTime = string.Format("{0:0}:{1:00}", minutes, seconds);
+                }
+                textMatchCountDown.text = formattedTime;
+            }
         }
     }
 
