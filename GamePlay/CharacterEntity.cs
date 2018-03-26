@@ -7,6 +7,7 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Rigidbody))]
 public class CharacterEntity : BaseNetworkGameCharacter
 {
+    public const float DISCONNECT_WHEN_NOT_RESPAWN_DURATION = 60;
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
@@ -264,6 +265,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             localPlayerObject.SetActive(false);
         }
+        deathTime = Time.unscaledTime;
     }
 
     public override void OnStartClient()
@@ -308,9 +310,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
         base.Update();
         if (NetworkManager != null && NetworkManager.IsMatchEnded)
             return;
+        
+        if (Hp <= 0)
+        {
+            if (!isServer && isLocalPlayer && Time.unscaledTime - deathTime >= DISCONNECT_WHEN_NOT_RESPAWN_DURATION)
+                GameNetworkManager.Singleton.StopHost();
 
-        if (isServer && Hp <= 0)
-            attackingActionId = -1;
+            if (isServer)
+                attackingActionId = -1;
+        }
+
         if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
             isInvincible = false;
         if (invincibleEffect != null)
