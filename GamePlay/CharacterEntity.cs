@@ -406,19 +406,34 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!isLocalPlayer || Hp <= 0)
             return;
 
-        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
-        Move(direction);
+        bool canControl = true;
+        var fields = FindObjectsOfType<InputField>();
+        foreach (var field in fields)
+        {
+            if (field.isFocused)
+            {
+                canControl = false;
+                break;
+            }
+        }
+
+        if (canControl)
+        {
+            var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
+            Move(direction);
+        }
 
         bool showJoystick = Application.isMobilePlatform;
 #if UNITY_EDITOR
         showJoystick = GameInstance.Singleton.showJoystickInEditor;
 #endif
         InputManager.useMobileInputOnNonMobile = showJoystick;
+
         if (showJoystick)
         {
             direction = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
             Rotate(direction);
-            if (direction.magnitude != 0)
+            if (direction.magnitude != 0 && canControl)
                 Attack();
             else
                 StopAttack();
@@ -427,14 +442,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             direction = (Input.mousePosition - targetCamera.WorldToScreenPoint(transform.position)).normalized;
             Rotate(direction);
-            if (Input.GetMouseButton(0))
+            if (Input.GetMouseButton(0) && canControl)
                 Attack();
             else
                 StopAttack();
         }
 
         var velocity = TempRigidbody.velocity;
-        if (isGround && InputManager.GetButton("Jump"))
+        if (isGround && canControl && InputManager.GetButton("Jump"))
         {
             TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
             isGround = false;
