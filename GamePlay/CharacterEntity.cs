@@ -124,8 +124,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected bool isMobileInput;
     protected Vector2 inputMove;
     protected Vector2 inputDirection;
-    protected bool inputJump;
     protected bool inputAttack;
+    protected bool inputJump;
 
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
@@ -356,23 +356,41 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!isLocalPlayer || Hp <= 0)
             return;
 
+        bool canControl = true;
+        var fields = FindObjectsOfType<InputField>();
+        foreach (var field in fields)
+        {
+            if (field.isFocused)
+            {
+                canControl = false;
+                break;
+            }
+        }
+
         isMobileInput = Application.isMobilePlatform;
 #if UNITY_EDITOR
         isMobileInput = GameInstance.Singleton.showJoystickInEditor;
 #endif
         InputManager.useMobileInputOnNonMobile = isMobileInput;
 
-        inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
-        inputJump = InputManager.GetButtonDown("Jump");
-        if (isMobileInput)
+        inputMove = Vector2.zero;
+        inputDirection = Vector2.zero;
+        inputAttack = false;
+        inputJump = false;
+        if (canControl)
         {
-            inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
-            inputAttack = inputDirection.magnitude != 0;
-        }
-        else
-        {
-            inputDirection = (Input.mousePosition - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
-            inputAttack = Input.GetMouseButton(0);
+            inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
+            inputJump = InputManager.GetButtonDown("Jump");
+            if (isMobileInput)
+            {
+                inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
+                inputAttack = inputDirection.magnitude != 0;
+            }
+            else
+            {
+                inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
+                inputAttack = InputManager.GetButton("Fire1");
+            }
         }
     }
 
@@ -437,29 +455,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!isLocalPlayer || Hp <= 0)
             return;
 
-        bool canControl = true;
-        var fields = FindObjectsOfType<InputField>();
-        foreach (var field in fields)
-        {
-            if (field.isFocused)
-            {
-                canControl = false;
-                break;
-            }
-        }
-
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
-        if (canControl)
-            Move(moveDirection);
-
+        Move(moveDirection);
         Rotate(inputDirection);
-        if (inputAttack && canControl)
+        if (inputAttack)
             Attack();
         else
             StopAttack();
 
         var velocity = TempRigidbody.velocity;
-        if (isGround && canControl && inputJump)
+        if (isGround && inputJump)
         {
             TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
             isGround = false;
