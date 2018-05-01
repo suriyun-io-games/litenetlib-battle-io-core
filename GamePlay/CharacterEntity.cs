@@ -417,11 +417,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
             }
         }
 
+        var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
         if (canControl)
-        {
-            var direction = new Vector3(InputManager.GetAxis("Horizontal", false), 0, InputManager.GetAxis("Vertical", false));
             Move(direction);
-        }
 
         bool showJoystick = Application.isMobilePlatform;
 #if UNITY_EDITOR
