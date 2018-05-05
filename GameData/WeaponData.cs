@@ -18,11 +18,17 @@ public class WeaponData : ItemData
     public AudioClip[] attackFx;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, int spread)
+    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
     {
         if (attacker == null)
             return;
 
+        var gameplayManager = GameplayManager.Singleton;
+        var spread = attacker.TotalSpreadDamages;
+        var damage = (float)attacker.TotalAttack;
+        damage += Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage;
+
+        var addRotationX = 0f;
         var addRotationY = 0f;
         var addingRotationY = 360f / spread;
         
@@ -34,15 +40,23 @@ public class WeaponData : ItemData
 
         for (var i = 0; i < spread; ++i)
         {
-            var damageLaunchTransform = attacker.damageLaunchTransform;
-            var damageEntity = Instantiate(damagePrefab,
-                    damageLaunchTransform.position,
-                    damageLaunchTransform.rotation);
+            Transform launchTransform;
+            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            damageEntity.InitAttacker(attacker, addRotationY);
-            NetworkServer.Spawn(damageEntity.gameObject);
+            var position = launchTransform.position;
+            var direction = attacker.TempTransform.forward;
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
+            damageEntity.weaponDamage = Mathf.CeilToInt(damage);
+            var msg = new OpMsgCharacterAttack();
+            msg.weaponId = GetId();
+            msg.position = position;
+            msg.direction = direction;
+            msg.attackerNetId = attacker.netId;
+            msg.addRotationX = addRotationX;
+            msg.addRotationY = addRotationY;
+            NetworkServer.SendToAll(msg.OpId, msg);
             addRotationY += addingRotationY;
         }
 

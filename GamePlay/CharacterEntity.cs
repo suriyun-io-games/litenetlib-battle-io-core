@@ -493,6 +493,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    public void GetDamageLaunchTransform(bool isLeftHandWeapon, out Transform launchTransform)
+    {
+        launchTransform = null;
+        if (characterModel == null || !characterModel.TryGetDamageLaunchTransform(isLeftHandWeapon, out launchTransform))
+            launchTransform = damageLaunchTransform;
+    }
+
     protected void Attack()
     {
         if (attackingActionId < 0 && isLocalPlayer)
@@ -534,7 +541,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
                 // Launch damage entity on server only
                 if (isServer)
-                    weaponData.Launch(this, TotalSpreadDamages);
+                    weaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
 
                 // Random play shoot sounds
                 if (weaponData.attackFx != null && weaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
