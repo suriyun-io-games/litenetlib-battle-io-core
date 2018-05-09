@@ -4,21 +4,29 @@ using UnityEngine.Networking;
 public class IONetworkGameRule : BaseNetworkGameRule
 {
     public UIGameplay uiGameplayPrefab;
+    public CharacterEntity overrideCharacterPrefab;
+    public BotEntity overrideBotPrefab;
 
     public override bool HasOptionBotCount { get { return true; } }
-
     public override bool HasOptionMatchTime { get { return false; } }
-
     public override bool HasOptionMatchKill { get { return false; } }
-
     public override bool HasOptionMatchScore { get { return false; } }
+    public override bool ShowZeroScoreWhenDead { get { return true; } }
+    public override bool ShowZeroKillCountWhenDead { get { return true; } }
+    public override bool ShowZeroAssistCountWhenDead { get { return true; } }
+    public override bool ShowZeroDieCountWhenDead { get { return true; } }
 
     protected override BaseNetworkGameCharacter NewBot()
     {
         var gameInstance = GameInstance.Singleton;
         var botList = gameInstance.bots;
         var bot = botList[Random.Range(0, botList.Length)];
-        var botEntity = Instantiate(gameInstance.botPrefab);
+        // Get character prefab
+        BotEntity botPrefab = gameInstance.botPrefab;
+        if (overrideBotPrefab != null)
+            botPrefab = overrideBotPrefab;
+        // Set character data
+        var botEntity = Instantiate(botPrefab);
         botEntity.playerName = bot.name;
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
@@ -34,7 +42,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         var gameplayManager = GameplayManager.Singleton;
         var targetCharacter = character as CharacterEntity;
-        return Time.unscaledTime - targetCharacter.deathTime >= gameplayManager.respawnDuration;
+        return gameplayManager.CanRespawn(targetCharacter) && Time.unscaledTime - targetCharacter.deathTime >= gameplayManager.respawnDuration;
     }
 
     public override bool RespawnCharacter(BaseNetworkGameCharacter character, params object[] extraParams)
@@ -63,8 +71,25 @@ public class IONetworkGameRule : BaseNetworkGameRule
         return true;
     }
 
+    public override void OnStartServer(BaseNetworkGameManager manager)
+    {
+        base.OnStartServer(manager);
+
+        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
+            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
+
+        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
+            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
+    }
+
     public override void InitialClientObjects(NetworkClient client)
     {
+        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
+            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
+
+        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
+            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
+
         var ui = FindObjectOfType<UIGameplay>();
         if (ui == null && uiGameplayPrefab != null)
         {
