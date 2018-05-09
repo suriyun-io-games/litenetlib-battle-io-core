@@ -49,7 +49,8 @@ public class UIGameplay : MonoBehaviour
         {
             foreach (var hidingIfDedicateUi in hidingIfDedicateServerUis)
             {
-                hidingIfDedicateUi.SetActive(!NetworkServer.active || NetworkServer.localClientActive);
+                if (hidingIfDedicateUi != null)
+                    hidingIfDedicateUi.SetActive(!NetworkServer.active || NetworkServer.localClientActive);
             }
             isNetworkActiveDirty = isNetworkActive;
         }
@@ -60,7 +61,8 @@ public class UIGameplay : MonoBehaviour
 #if UNITY_EDITOR
             showJoystick = GameInstance.Singleton.showJoystickInEditor;
 #endif
-            mobileOnlyUi.SetActive(showJoystick);
+            if (mobileOnlyUi != null)
+                mobileOnlyUi.SetActive(showJoystick);
         }
 
         var localCharacter = BaseNetworkGameCharacter.Local as CharacterEntity;
