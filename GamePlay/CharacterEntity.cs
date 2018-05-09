@@ -117,6 +117,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         get { return hp <= 0; }
     }
 
+    public System.Action onDead;
     protected Camera targetCamera;
     protected CharacterModel characterModel;
     protected CharacterData characterData;
@@ -568,7 +569,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ReceiveDamage(CharacterEntity attacker, int damage)
     {
-        if (Hp <= 0 || isInvincible)
+        var gameplayManager = GameplayManager.Singleton;
+        if (Hp <= 0 || isInvincible || !gameplayManager.CanReceiveDamage(this))
             return;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
@@ -585,7 +587,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 attacker.Hp += leechHpAmount;
             }
             if (Hp == 0)
+            {
+                if (onDead != null)
+                    onDead.Invoke();
                 attacker.KilledTarget(this);
+                ++dieCount;
+            }
         }
     }
 
