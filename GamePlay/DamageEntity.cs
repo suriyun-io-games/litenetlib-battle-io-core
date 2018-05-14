@@ -169,22 +169,8 @@ public class DamageEntity : MonoBehaviour
                 AudioSource.PlayClipAtPoint(hitFx[Random.Range(0, hitFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
         }
 
-        // Destroy this on all clients
-        if (NetworkServer.active)
-        {
-            NetworkServer.Destroy(gameObject);
-            isDead = true;
-        }
-        else if (!isDead)
-        {
-            EffectEntity.PlayEffect(explodeEffectPrefab, TempTransform);
-            var renderers = GetComponentsInChildren<Renderer>();
-            foreach (var renderer in renderers)
-            {
-                renderer.enabled = false;
-            }
-            isDead = true;
-        }
+        Destroy(gameObject);
+        isDead = true;
     }
 
     private void ApplyDamage(CharacterEntity target)
