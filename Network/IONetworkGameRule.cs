@@ -56,12 +56,12 @@ public class IONetworkGameRule : BaseNetworkGameRule
         // For IO Modes, character stats will be reset when dead
         if (!isWatchedAds || targetCharacter.watchAdsCount >= gameplayManager.watchAdsRespawnAvailable)
         {
-            targetCharacter.score = 0;
+            targetCharacter.ResetScore();
+            targetCharacter.ResetKillCount();
+            targetCharacter.ResetAssistCount();
             targetCharacter.Exp = 0;
             targetCharacter.level = 1;
             targetCharacter.statPoint = 0;
-            targetCharacter.killCount = 0;
-            targetCharacter.assistCount = 0;
             targetCharacter.watchAdsCount = 0;
             targetCharacter.addStats = new CharacterStats();
         }
