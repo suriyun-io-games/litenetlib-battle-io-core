@@ -235,7 +235,8 @@ public class BRGameplayManager : GameplayManager
     {
         if (currentState == BRState.Shrinking)
         {
-            var interp = (currentShrinkDuration - CurrentCountdown) / currentShrinkDuration;
+            var countdown = isServer ? currentCountdown : CurrentCountdown;
+            var interp = (currentShrinkDuration - countdown) / currentShrinkDuration;
             currentRadius = Mathf.Lerp(startShrinkRadius, nextRadius, interp);
             currentCenterPosition = Vector3.Lerp(startShrinkCenterPosition, nextCenterPosition, interp);
         }
@@ -245,7 +246,7 @@ public class BRGameplayManager : GameplayManager
     {
         if (!isServer)
             return;
-
+        
         if (currentState != BRState.WaitingForPlayers)
         {
             spawnerMoveCountdown -= Time.deltaTime;
@@ -284,7 +285,8 @@ public class BRGameplayManager : GameplayManager
 
     public Vector3 GetSpawnerPosition()
     {
-        var interp = (spawnerMoveDuration - SpawnerMoveCountdown) / spawnerMoveDuration;
+        var countdown = isServer ? spawnerMoveCountdown : SpawnerMoveCountdown;
+        var interp = (spawnerMoveDuration - countdown) / spawnerMoveDuration;
         return Vector3.Lerp(spawnerMoveFrom, spawnerMoveTo, interp);
     }
 
