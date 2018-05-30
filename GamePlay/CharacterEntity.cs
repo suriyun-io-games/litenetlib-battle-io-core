@@ -398,11 +398,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         inputMove = Vector2.zero;
         inputDirection = Vector2.zero;
         inputAttack = false;
-        inputJump = false;
         if (canControl)
         {
             inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
-            inputJump = InputManager.GetButtonDown("Jump");
+            if (!inputJump)
+                inputJump = InputManager.GetButtonDown("Jump") && isGround;
             if (isMobileInput)
             {
                 inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
@@ -492,12 +492,20 @@ public class CharacterEntity : BaseNetworkGameCharacter
         {
             TempRigidbody.velocity = new Vector3(velocity.x, CalculateJumpVerticalSpeed(), velocity.z);
             isGround = false;
+            inputJump = false;
         }
+    }
+
+    protected virtual void OnCollisionEnter(Collision collision)
+    {
+        if (!isGround && collision.impulse.y > 0)
+            isGround = true;
     }
 
     protected virtual void OnCollisionStay(Collision collision)
     {
-        isGround = true;
+        if (!isGround && collision.impulse.y > 0)
+            isGround = true;
     }
 
     protected float CalculateJumpVerticalSpeed()
@@ -633,6 +641,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             }
         }
         ++killCount;
+        GameNetworkManager.Singleton.SendKillNotify(playerName, target.playerName, weaponData == null ? string.Empty : weaponData.GetId());
     }
 
     [Server]
