@@ -16,6 +16,7 @@ public class WeaponData : ItemData
     public DamageEntity damagePrefab;
     [Header("SFX")]
     public AudioClip[] attackFx;
+    public int weaponAnimId;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
     public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
