@@ -15,12 +15,6 @@ public class BotEntity : CharacterEntity
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
-    public bool useCustomMoveSpeed;
-    public float customMoveSpeed;
-    public CharacterModel fixCharacterModel;
-    public CharacterData fixCharacterData;
-    public HeadData fixHeadData;
-    public WeaponData fixWeaponData;
     public Characteristic characteristic;
     public CharacterStats startAddStats;
     private Vector3 targetPosition;
@@ -34,59 +28,6 @@ public class BotEntity : CharacterEntity
         ServerSpawn(false);
         lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
-    }
-
-    protected override void OnCharacterChanged(string value)
-    {
-        if (fixCharacterModel != null && fixCharacterData != null)
-        {
-            selectCharacter = fixCharacterData.GetId();
-            characterData = fixCharacterData;
-            characterModel = fixCharacterModel;
-            if (headData != null)
-                characterModel.SetHeadModel(headData.modelObject);
-            if (weaponData != null)
-                characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
-        }
-        else if (fixCharacterData != null)
-        {
-            selectCharacter = fixCharacterData.GetId();
-            base.OnCharacterChanged(selectCharacter);
-        }
-        else if (fixCharacterModel != null)
-        {
-            selectCharacter = value;
-            characterData = GameInstance.GetCharacter(value);
-            characterModel = fixCharacterModel;
-            if (headData != null)
-                characterModel.SetHeadModel(headData.modelObject);
-            if (weaponData != null)
-                characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
-        }
-        else
-            base.OnCharacterChanged(value);
-    }
-
-    protected override void OnHeadChanged(string value)
-    {
-        if (fixHeadData != null)
-        {
-            selectHead = fixHeadData.GetId();
-            base.OnHeadChanged(selectHead);
-        }
-        else
-            base.OnHeadChanged(value);
-    }
-
-    protected override void OnWeaponChanged(string value)
-    {
-        if (fixWeaponData != null)
-        {
-            selectWeapon = fixWeaponData.GetId();
-            base.OnWeaponChanged(selectWeapon);
-        }
-        else
-            base.OnWeaponChanged(value);
     }
 
     public override void OnStartLocalPlayer()
@@ -143,11 +84,6 @@ public class BotEntity : CharacterEntity
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         TempTransform.rotation = Quaternion.Lerp(TempTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
-    }
-
-    protected override float GetMoveSpeed()
-    {
-        return (useCustomMoveSpeed ? customMoveSpeed : TotalMoveSpeed) * GameplayManager.REAL_MOVE_SPEED_RATE;
     }
 
     private bool IsReachedTargetPosition()
