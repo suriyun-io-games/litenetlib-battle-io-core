@@ -9,9 +9,12 @@ public class PowerUpEntity : NetworkBehaviour
     // We're going to respawn this power up so I decide to keep its prefab name to spawning when character triggered
     [HideInInspector]
     public string prefabName;
+    [Header("Recovery / Currencies")]
     public int hp;
     public int exp;
     public WeaponData changingWeapon;
+    public InGameCurrency[] currencies;
+    [Header("Effect")]
     public EffectEntity powerUpEffect;
 
     private bool isDead;
@@ -38,6 +41,13 @@ public class PowerUpEntity : NetworkBehaviour
                 character.Exp += Mathf.CeilToInt(exp * character.TotalExpRate);
                 if (changingWeapon != null)
                     character.ChangeWeapon(changingWeapon);
+            }
+            if (character.isLocalPlayer)
+            {
+                foreach (var currency in currencies)
+                {
+                    MonetizationManager.Save.AddCurrency(currency.id, currency.amount);
+                }
             }
             StartCoroutine(DestroyRoutine());
         }
