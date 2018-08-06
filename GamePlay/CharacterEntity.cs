@@ -772,7 +772,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRevive()
     {
-        selectWeapon = defaultSelectWeapon;
+        if (!string.IsNullOrEmpty(defaultSelectWeapon))
+            selectWeapon = defaultSelectWeapon;
         isPlayingAttackAnim = false;
         isDead = false;
         Hp = TotalHp;
