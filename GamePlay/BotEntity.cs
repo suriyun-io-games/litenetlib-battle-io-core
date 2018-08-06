@@ -65,11 +65,21 @@ public class BotEntity : CharacterEntity
 
         var rotatePosition = targetPosition;
         CharacterEntity enemy;
-        if (FindEnemy(out enemy) && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
+        if (FindEnemy(out enemy))
         {
-            lastAttackTime = Time.unscaledTime;
-            if (attackingActionId < 0)
-                attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+            if (characteristic == Characteristic.Normal)
+            {
+                if (Time.unscaledTime - lastAttackTime >= attackDuration)
+                {
+                    if (attackingActionId < 0)
+                        attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+                    lastAttackTime = Time.unscaledTime;
+                }
+                else if (attackingActionId >= 0)
+                    attackingActionId = -1;
+            }
+            else if (attackingActionId >= 0)
+                attackingActionId = -1;
             rotatePosition = enemy.TempTransform.position;
         }
         else if (attackingActionId >= 0)
