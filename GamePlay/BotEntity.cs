@@ -49,6 +49,7 @@ public class BotEntity : CharacterEntity
         if (Hp <= 0)
         {
             ServerRespawn(false);
+            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
             return;
         }
         // Bots will update target movement when reached move target / hitting the walls / it's time
@@ -64,23 +65,15 @@ public class BotEntity : CharacterEntity
 
         var rotatePosition = targetPosition;
         CharacterEntity enemy;
-        if (FindEnemy(out enemy))
+        if (FindEnemy(out enemy) && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
         {
-            if (characteristic == Characteristic.Normal)
-            {
-                if (Time.unscaledTime - lastAttackTime >= attackDuration)
-                {
-                    if (attackingActionId < 0)
-                        attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
-                    lastAttackTime = Time.unscaledTime;
-                }
-                else if (attackingActionId >= 0)
-                    attackingActionId = -1;
-            }
-            else if (attackingActionId >= 0)
-                attackingActionId = -1;
+            lastAttackTime = Time.unscaledTime;
+            if (attackingActionId < 0)
+                attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
             rotatePosition = enemy.TempTransform.position;
         }
+        else if (attackingActionId >= 0)
+            attackingActionId = -1;
 
         // Gets a vector that points from the player's position to the target's.
         if (!IsReachedTargetPosition())
