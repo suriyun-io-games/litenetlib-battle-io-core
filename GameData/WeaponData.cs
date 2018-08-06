@@ -58,7 +58,7 @@ public class WeaponData : ItemData
             foreach (var characterCollider in characterColliders)
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
-                if (character != null && !(character is BotEntity))
+                if (character != null && !(character is BotEntity) && !(character is MonsterEntity))
                     NetworkServer.SendToClient(character.connectionToClient.connectionId, msg.OpId, msg);
             }
             addRotationY += addingRotationY;

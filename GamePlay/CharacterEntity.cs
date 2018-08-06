@@ -56,7 +56,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     [SyncVar]
     public int exp;
-    public int Exp
+    public virtual int Exp
     {
         get { return exp; }
         set
@@ -176,7 +176,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public CharacterStats SumAddStats
+    public virtual CharacterStats SumAddStats
     {
         get
         {
@@ -192,7 +192,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalHp
+    public virtual int TotalHp
     {
         get
         {
@@ -201,7 +201,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalAttack
+    public virtual int TotalAttack
     {
         get
         {
@@ -210,7 +210,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalDefend
+    public virtual int TotalDefend
     {
         get
         {
@@ -219,7 +219,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalMoveSpeed
+    public virtual int TotalMoveSpeed
     {
         get
         {
@@ -228,7 +228,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public float TotalExpRate
+    public virtual float TotalExpRate
     {
         get
         {
@@ -237,7 +237,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public float TotalScoreRate
+    public virtual float TotalScoreRate
     {
         get
         {
@@ -246,7 +246,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public float TotalHpRecoveryRate
+    public virtual float TotalHpRecoveryRate
     {
         get
         {
@@ -255,7 +255,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public float TotalDamageRateLeechHp
+    public virtual float TotalDamageRateLeechHp
     {
         get
         {
@@ -264,7 +264,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    public int TotalSpreadDamages
+    public virtual int TotalSpreadDamages
     {
         get
         {
@@ -276,6 +276,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
             else
                 return maxValue;
         }
+    }
+
+    public virtual int RewardExp
+    {
+        get { return GameplayManager.Singleton.GetRewardExp(level); }
+    }
+
+    public virtual int KillScore
+    {
+        get { return GameplayManager.Singleton.GetKillScore(level); }
     }
 
     private void Awake()
@@ -634,8 +644,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         var gameplayManager = GameplayManager.Singleton;
         var targetLevel = target.level;
         var maxLevel = gameplayManager.maxLevel;
-        Exp += Mathf.CeilToInt(gameplayManager.GetRewardExp(targetLevel) * TotalExpRate);
-        score += Mathf.CeilToInt(gameplayManager.GetKillScore(targetLevel) * TotalScoreRate);
+        Exp += Mathf.CeilToInt(target.RewardExp * TotalExpRate);
+        score += Mathf.CeilToInt(target.KillScore * TotalScoreRate);
         if (connectionToClient != null)
         {
             foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
@@ -719,6 +729,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
             renderer.enabled = !IsHidding;
     }
 
+    public virtual Vector3 GetSpawnPosition()
+    {
+        return GameplayManager.Singleton.GetCharacterSpawnPosition(this);
+    }
+
     public virtual void OnSpawn() { }
 
     [Server]
@@ -736,7 +751,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             var gameplayManager = GameplayManager.Singleton;
             ServerInvincible();
             OnSpawn();
-            var position = gameplayManager.GetCharacterSpawnPosition(this);
+            var position = GetSpawnPosition();
             TempTransform.position = position;
             if (connectionToClient != null)
                 TargetSpawn(connectionToClient, position);

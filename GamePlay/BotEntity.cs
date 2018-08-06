@@ -10,13 +10,13 @@ public class BotEntity : CharacterEntity
         NoneAttack
     }
     public const float ReachedTargetDistance = 0.1f;
-    public float updateMovementDuration = 2;
-    public float attackDuration = 0;
+    [Header("Bot config set here")]
+    public float updateMovementDuration = 2f;
+    public float attackDuration = 0f;
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
     public Characteristic characteristic;
-    public CharacterStats startAddStats;
     private Vector3 targetPosition;
     private float lastUpdateMovementTime;
     private float lastAttackTime;
@@ -52,8 +52,7 @@ public class BotEntity : CharacterEntity
             return;
         }
         // Bots will update target movement when reached move target / hitting the walls / it's time
-        var isReachedTarget = IsReachedTargetPosition();
-        if (isReachedTarget || isWallHit || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
+        if (isWallHit || Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
         {
             lastUpdateMovementTime = Time.unscaledTime;
             targetPosition = new Vector3(
@@ -65,21 +64,32 @@ public class BotEntity : CharacterEntity
 
         var rotatePosition = targetPosition;
         CharacterEntity enemy;
-        if (FindEnemy(out enemy) && characteristic == Characteristic.Normal && Time.unscaledTime - lastAttackTime >= attackDuration)
+        if (FindEnemy(out enemy))
         {
-            lastAttackTime = Time.unscaledTime;
-            if (attackingActionId < 0)
-                attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+            if (characteristic == Characteristic.Normal)
+            {
+                if (Time.unscaledTime - lastAttackTime >= attackDuration)
+                {
+                    if (attackingActionId < 0)
+                        attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+                    lastAttackTime = Time.unscaledTime;
+                }
+                else if (attackingActionId >= 0)
+                    attackingActionId = -1;
+            }
+            else if (attackingActionId >= 0)
+                attackingActionId = -1;
             rotatePosition = enemy.TempTransform.position;
         }
-        else if (attackingActionId >= 0)
-            attackingActionId = -1;
 
         // Gets a vector that points from the player's position to the target's.
-        var heading = targetPosition - TempTransform.position;
-        var distance = heading.magnitude;
-        var direction = heading / distance; // This is now the normalized direction.
-        Move(direction);
+        if (!IsReachedTargetPosition())
+            Move((targetPosition - TempTransform.position).normalized);
+        if (IsReachedTargetPosition())
+        {
+            targetPosition = TempTransform.position + (TempTransform.forward * ReachedTargetDistance / 2f);
+            TempRigidbody.velocity = new Vector3(0, TempRigidbody.velocity.y, 0);
+        }
         // Rotate to target
         var rotateHeading = rotatePosition - TempTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
@@ -112,12 +122,5 @@ public class BotEntity : CharacterEntity
         base.OnCollisionStay(collision);
         if (collision.collider.tag == "Wall")
             isWallHit = true;
-    }
-
-    public override void OnSpawn()
-    {
-        base.OnSpawn();
-        addStats += startAddStats;
-        Hp = TotalHp;
     }
 }
