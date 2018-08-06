@@ -72,16 +72,6 @@ public class MonsterEntity : CharacterEntity
         get { return 0; }
     }
 
-    public override float TotalHpRecoveryRate
-    {
-        get { return SumAddStats.addHpRecoveryRate; }
-    }
-
-    public override float TotalDamageRateLeechHp
-    {
-        get { return SumAddStats.addDamageRateLeechHp; }
-    }
-
     public override int TotalSpreadDamages
     {
         get { return SumAddStats.addSpreadDamages; }

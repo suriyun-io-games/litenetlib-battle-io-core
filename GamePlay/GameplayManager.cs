@@ -87,7 +87,7 @@ public class GameplayManager : NetworkBehaviour
         }
     }
 
-    public Vector3 GetCharacterSpawnPosition(CharacterEntity character)
+    public Vector3 GetCharacterSpawnPosition()
     {
         if (characterSpawnAreas == null || characterSpawnAreas.Length == 0)
             return Vector3.zero;
