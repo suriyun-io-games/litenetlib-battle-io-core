@@ -135,6 +135,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public bool isPlayingAttackAnim { get; private set; }
     public float deathTime { get; private set; }
     public float invincibleTime { get; private set; }
+    public string defaultSelectWeapon { get; private set; }
 
     private bool isHidding;
     public bool IsHidding
@@ -707,6 +708,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected virtual void OnWeaponChanged(string value)
     {
         selectWeapon = value;
+        if (string.IsNullOrEmpty(defaultSelectWeapon))
+            defaultSelectWeapon = value;
         weaponData = GameInstance.GetWeapon(value);
         if (characterModel != null && weaponData != null)
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
@@ -769,6 +772,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRevive()
     {
+        selectWeapon = defaultSelectWeapon;
         isPlayingAttackAnim = false;
         isDead = false;
         Hp = TotalHp;
