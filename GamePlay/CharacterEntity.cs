@@ -708,8 +708,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected virtual void OnWeaponChanged(string value)
     {
         selectWeapon = value;
-        if (string.IsNullOrEmpty(defaultSelectWeapon))
-            defaultSelectWeapon = value;
+        if (isServer)
+        {
+            if (string.IsNullOrEmpty(defaultSelectWeapon))
+                defaultSelectWeapon = value;
+        }
         weaponData = GameInstance.GetWeapon(value);
         if (characterModel != null && weaponData != null)
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
