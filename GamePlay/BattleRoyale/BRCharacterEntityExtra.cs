@@ -74,6 +74,21 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     private void Update()
     {
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+        // Monster entity does not have to move following the air plane
+        if (isServer && TempCharacterEntity is MonsterEntity)
+        {
+            if (!TempCharacterEntity.TempRigidbody.useGravity)
+                TempCharacterEntity.TempRigidbody.useGravity = true;
+            if (!TempCharacterEntity.enabled)
+                TempCharacterEntity.enabled = true;
+            TempCharacterEntity.IsHidding = false;
+            if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
+                isSpawned = true;
+            return;
+        }
+
         if (isServer)
         {
             if (brGameManager.currentState != BRState.WaitingForPlayers && Time.realtimeSinceStartup - lastCircleCheckTime >= 1f)
