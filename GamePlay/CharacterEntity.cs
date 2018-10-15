@@ -17,6 +17,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public Transform characterModelTransform;
     public GameObject[] localPlayerObjects;
     public float jumpHeight = 2f;
+    public float dashDuration = 1.5f;
+    public float dashMoveSpeedMultiplier = 1.5f;
     [Header("UI")]
     public Transform hpBarContainer;
     public Image hpFillImage;
@@ -128,6 +130,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected Vector2 inputDirection;
     protected bool inputAttack;
     protected bool inputJump;
+    protected bool isDashing;
+    protected Vector2 dashInputMove;
+    protected float dashingTime;
 
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
@@ -373,6 +378,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
             levelText.text = level.ToString("N0");
         UpdateAnimation();
         UpdateInput();
+        // Update dash state
+        if (isDashing && Time.unscaledTime - dashingTime > dashDuration)
+            isDashing = false;
     }
 
     private void FixedUpdate()
@@ -412,19 +420,38 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (canControl)
         {
             inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
+            
+            // Jump
             if (!inputJump)
-                inputJump = InputManager.GetButtonDown("Jump") && isGround;
-            if (isMobileInput)
+                inputJump = InputManager.GetButtonDown("Jump") && isGround && !isDashing;
+            // Attack, Can attack while not dashing
+            if (!isDashing)
             {
-                inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
-                if (canAttack)
-                    inputAttack = inputDirection.magnitude != 0;
+                if (isMobileInput)
+                {
+                    inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
+                    if (canAttack)
+                        inputAttack = inputDirection.magnitude != 0;
+                }
+                else
+                {
+                    inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
+                    if (canAttack)
+                        inputAttack = InputManager.GetButton("Fire1");
+                }
             }
-            else
+            
+            // Dash
+            if (!isDashing)
             {
-                inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
-                if (canAttack)
-                    inputAttack = InputManager.GetButton("Fire1");
+                isDashing = InputManager.GetButtonDown("Dash") && isGround;
+                if (isDashing)
+                {
+                    inputAttack = false;
+                    dashInputMove = new Vector2(TempTransform.forward.x, TempTransform.forward.z).normalized;
+                    dashingTime = Time.unscaledTime;
+                    CmdDash();
+                }
             }
         }
     }
@@ -444,6 +471,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetFloat("JumpSpeed", 0);
             animator.SetFloat("MoveSpeed", 0);
             animator.SetBool("IsGround", true);
+            animator.SetBool("IsDash", false);
         }
         else
         {
@@ -454,6 +482,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetFloat("JumpSpeed", ySpeed);
             animator.SetFloat("MoveSpeed", xzMagnitude);
             animator.SetBool("IsGround", Mathf.Abs(ySpeed) < 0.5f);
+            animator.SetBool("IsDash", isDashing);
         }
 
         if (weaponData != null)
@@ -477,7 +506,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             if (direction.magnitude > 1)
                 direction = direction.normalized;
 
-            var targetSpeed = GetMoveSpeed();
+            var targetSpeed = GetMoveSpeed() * (isDashing ? dashMoveSpeedMultiplier : 1f);
             var targetVelocity = direction * targetSpeed;
 
             // Apply a force that attempts to reach our target velocity
@@ -496,8 +525,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return;
 
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
-        Move(moveDirection);
-        Rotate(inputDirection);
+        var dashDirection = new Vector3(dashInputMove.x, 0, dashInputMove.y);
+
+        Move(isDashing ? dashDirection : moveDirection);
+        Rotate(isDashing ? dashInputMove : inputDirection);
+
         if (inputAttack)
             Attack();
         else
@@ -831,6 +863,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    [Command]
+    public void CmdDash()
+    {
+        // Play dash animation on other clients
+        RpcDash();
+    }
+
     [ClientRpc]
     public void RpcEffect(NetworkInstanceId triggerId, byte effectType)
     {
@@ -862,6 +901,17 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 if (trap != null)
                     EffectEntity.PlayEffect(trap.hitEffectPrefab, effectTransform);
             }
+        }
+    }
+
+    [ClientRpc]
+    public void RpcDash()
+    {
+        // Just play dash animation on another clients
+        if (!isLocalPlayer)
+        {
+            isDashing = true;
+            dashingTime = Time.unscaledTime;
         }
     }
 
