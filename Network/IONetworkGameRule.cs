@@ -6,6 +6,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public UIGameplay uiGameplayPrefab;
     public CharacterEntity overrideCharacterPrefab;
     public BotEntity overrideBotPrefab;
+    public WeaponData startWeapon;
 
     public override bool HasOptionBotCount { get { return true; } }
     public override bool HasOptionMatchTime { get { return false; } }
@@ -31,7 +32,15 @@ public class IONetworkGameRule : BaseNetworkGameRule
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
         botEntity.selectWeapon = bot.GetSelectWeapon();
+        if (startWeapon != null)
+            botEntity.selectWeapon = startWeapon.GetId();
         return botEntity;
+    }
+
+    public virtual void NewPlayer(CharacterEntity character)
+    {
+        if (startWeapon != null)
+            character.selectWeapon = startWeapon.GetId();
     }
 
     protected override void EndMatch()

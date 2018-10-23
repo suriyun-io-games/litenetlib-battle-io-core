@@ -530,7 +530,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         Move(isDashing ? dashDirection : moveDirection);
         Rotate(isDashing ? dashInputMove : inputDirection);
 
-        if (inputAttack)
+        if (inputAttack && GameplayManager.Singleton.CanAttack(this))
             Attack();
         else
             StopAttack();
@@ -645,10 +645,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public void ReceiveDamage(CharacterEntity attacker, int damage)
     {
         var gameplayManager = GameplayManager.Singleton;
-        if (Hp <= 0 || isInvincible || !gameplayManager.CanReceiveDamage(this))
+        if (Hp <= 0 || isInvincible)
             return;
 
         RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
+        if (!gameplayManager.CanReceiveDamage(this))
+            return;
+
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;

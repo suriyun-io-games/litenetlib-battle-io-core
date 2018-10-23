@@ -131,4 +131,12 @@ public class GameplayManager : NetworkBehaviour
             return false;
         return true;
     }
+
+    public virtual bool CanAttack(CharacterEntity character)
+    {
+        var networkGameplayManager = BaseNetworkGameManager.Singleton;
+        if (networkGameplayManager != null && networkGameplayManager.IsMatchEnded)
+            return false;
+        return true;
+    }
 }
