@@ -7,6 +7,8 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
 {
     public bool fillBots;
     public int endMatchCountDown = 10;
+    [Tooltip("Rewards for each ranking, sort from high to low (1 - 10)")]
+    public MatchReward[] rewards;
     public int EndMatchCountingDown { get; protected set; }
     public override bool HasOptionBotCount { get { return false; } }
     public override bool HasOptionMatchTime { get { return false; } }
@@ -16,10 +18,15 @@ public class BattleRoyaleNetworkGameRule : IONetworkGameRule
     public override bool ShowZeroKillCountWhenDead { get { return false; } }
     public override bool ShowZeroAssistCountWhenDead { get { return false; } }
     public override bool ShowZeroDieCountWhenDead { get { return false; } }
-
+    
     protected override void EndMatch()
     {
         networkManager.StartCoroutine(EndMatchRoutine());
+    }
+
+    public void SetRewards(int rank)
+    {
+        MatchRewardHandler.SetRewards(rank, rewards);
     }
 
     IEnumerator EndMatchRoutine()
