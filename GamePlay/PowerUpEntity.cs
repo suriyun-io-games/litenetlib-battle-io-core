@@ -42,7 +42,7 @@ public class PowerUpEntity : NetworkBehaviour
                 if (changingWeapon != null)
                     character.ChangeWeapon(changingWeapon);
             }
-            if (character.isLocalPlayer)
+            if (character.isLocalPlayer && !(character is BotEntity) && !(character is MonsterEntity))
             {
                 foreach (var currency in currencies)
                 {
