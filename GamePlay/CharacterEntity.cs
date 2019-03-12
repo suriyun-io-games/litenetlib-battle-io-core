@@ -25,6 +25,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public Text hpText;
     public Text nameText;
     public Text levelText;
+    public GameObject attackSignalObject;
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
@@ -384,6 +385,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         // Update dash state
         if (isDashing && Time.unscaledTime - dashingTime > dashDuration)
             isDashing = false;
+        // Update attack signal
+        if (attackSignalObject != null)
+            attackSignalObject.SetActive(isPlayingAttackAnim);
     }
 
     private void FixedUpdate()
