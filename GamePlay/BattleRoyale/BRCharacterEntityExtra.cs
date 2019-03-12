@@ -77,6 +77,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
         if (brGameManager == null)
             return;
+
         // Monster entity does not have to move following the air plane
         if (isServer && TempCharacterEntity is MonsterEntity)
         {
@@ -106,25 +107,8 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 lastCircleCheckTime = Time.realtimeSinceStartup;
             }
         }
-        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
-        {
-            if (isServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
-            {
-                botSpawnCalled = true;
-                StartCoroutine(BotSpawnRoutine());
-            }
-            if (TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = false;
-            if (TempCharacterEntity.enabled)
-                TempCharacterEntity.enabled = false;
-            TempCharacterEntity.IsHidding = true;
-            if (isServer || isLocalPlayer)
-            {
-                TempTransform.position = brGameManager.GetSpawnerPosition();
-                TempTransform.rotation = brGameManager.GetSpawnerRotation();
-            }
-        }
-        else if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
+
+        if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
         {
             if (isServer && !botDeadRemoveCalled && TempCharacterEntity is BotEntity && TempCharacterEntity.IsDead)
             {
@@ -136,6 +120,60 @@ public class BRCharacterEntityExtra : NetworkBehaviour
             if (!TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = true;
             TempCharacterEntity.IsHidding = false;
+        }
+
+        switch (brGameManager.spawnType)
+        {
+            case BRSpawnType.BattleRoyale:
+                UpdateSpawnBattleRoyale();
+                break;
+            case BRSpawnType.Random:
+                UpdateSpawnRandom();
+                break;
+        }
+    }
+
+    private void UpdateSpawnBattleRoyale()
+    {
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+
+        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned)
+        {
+            if (isServer && !botSpawnCalled && TempCharacterEntity is BotEntity && brGameManager.CanSpawnCharacter(TempCharacterEntity))
+            {
+                botSpawnCalled = true;
+                StartCoroutine(BotSpawnRoutine());
+            }
+            // Hide character and disable physics while in airplane
+            if (TempCharacterEntity.TempRigidbody.useGravity)
+                TempCharacterEntity.TempRigidbody.useGravity = false;
+            if (TempCharacterEntity.enabled)
+                TempCharacterEntity.enabled = false;
+            TempCharacterEntity.IsHidding = true;
+            // Move position / rotation follow the airplane
+            if (isServer || isLocalPlayer)
+            {
+                TempTransform.position = brGameManager.GetSpawnerPosition();
+                TempTransform.rotation = brGameManager.GetSpawnerRotation();
+            }
+        }
+    }
+
+    private void UpdateSpawnRandom()
+    {
+        var brGameManager = GameplayManager.Singleton as BRGameplayManager;
+        if (brGameManager == null)
+            return;
+
+        if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned && isServer)
+        {
+            var position = TempCharacterEntity.GetSpawnPosition();
+            TempCharacterEntity.TempTransform.position = position;
+            if (TempCharacterEntity.connectionToClient != null)
+                TempCharacterEntity.TargetSpawn(TempCharacterEntity.connectionToClient, position);
+            isSpawned = true;
         }
     }
 
