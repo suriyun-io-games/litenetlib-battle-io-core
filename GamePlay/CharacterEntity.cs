@@ -95,13 +95,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public int watchAdsCount;
 
     [SyncVar(hook = "OnCharacterChanged")]
-    public string selectCharacter = "";
+    public int selectCharacter = 0;
 
     [SyncVar(hook = "OnHeadChanged")]
-    public string selectHead = "";
+    public int selectHead = 0;
 
     [SyncVar(hook = "OnWeaponChanged")]
-    public string selectWeapon = "";
+    public int selectWeapon = 0;
+
+    public SyncListInt selectCustomEquipments = new SyncListInt();
 
     [SyncVar]
     public bool isInvincible;
@@ -129,6 +131,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected CharacterData characterData;
     protected HeadData headData;
     protected WeaponData weaponData;
+    protected Dictionary<int, CustomEquipmentData> customEquipmentDict = new Dictionary<int, CustomEquipmentData>();
     protected bool isMobileInput;
     protected Vector2 inputMove;
     protected Vector2 inputDirection;
@@ -144,7 +147,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public bool isPlayingAttackAnim { get; private set; }
     public float deathTime { get; private set; }
     public float invincibleTime { get; private set; }
-    public string defaultSelectWeapon { get; private set; }
+    public int defaultSelectWeapon { get; private set; }
 
     private bool isHidding;
     public bool IsHidding
@@ -198,6 +201,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 stats += characterData.stats;
             if (weaponData != null)
                 stats += weaponData.stats;
+            if (customEquipmentDict != null)
+            {
+                foreach (var value in customEquipmentDict.Values)
+                    stats += value.stats;
+            }
             return stats;
         }
     }
@@ -300,6 +308,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     private void Awake()
     {
+        selectCustomEquipments.Callback = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         if (damageLaunchTransform == null)
             damageLaunchTransform = TempTransform;
@@ -321,6 +330,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             OnHeadChanged(selectHead);
             OnCharacterChanged(selectCharacter);
             OnWeaponChanged(selectWeapon);
+            OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
         }
     }
 
@@ -329,6 +339,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         OnHeadChanged(selectHead);
         OnCharacterChanged(selectCharacter);
         OnWeaponChanged(selectWeapon);
+        OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
         attackingActionId = -1;
     }
 
@@ -718,7 +729,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return weaponData.damagePrefab.GetAttackRange();
     }
 
-    protected virtual void OnCharacterChanged(string value)
+    protected virtual void OnCharacterChanged(int value)
     {
         selectCharacter = value;
         if (characterModel != null)
@@ -734,11 +745,19 @@ public class CharacterEntity : BaseNetworkGameCharacter
             characterModel.SetHeadModel(headData.modelObject);
         if (weaponData != null)
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
+        if (customEquipmentDict != null)
+        {
+            characterModel.ClearCustomModels();
+            foreach (var customEquipmentEntry in customEquipmentDict.Values)
+            {
+                characterModel.SetCustomModel(customEquipmentEntry.containerIndex, customEquipmentEntry.modelObject);
+            }
+        }
         characterModel.gameObject.SetActive(true);
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnHeadChanged(string value)
+    protected virtual void OnHeadChanged(int value)
     {
         selectHead = value;
         headData = GameInstance.GetHead(value);
@@ -747,12 +766,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
-    protected virtual void OnWeaponChanged(string value)
+    protected virtual void OnWeaponChanged(int value)
     {
         selectWeapon = value;
         if (isServer)
         {
-            if (string.IsNullOrEmpty(defaultSelectWeapon))
+            if (defaultSelectWeapon == 0)
                 defaultSelectWeapon = value;
         }
         weaponData = GameInstance.GetWeapon(value);
@@ -761,11 +780,30 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateCharacterModelHiddingState();
     }
 
+    protected virtual void OnCustomEquipmentsChanged(SyncList<int>.Operation op, int itemIndex)
+    {
+        if (characterModel != null)
+            characterModel.ClearCustomModels();
+        customEquipmentDict.Clear();
+        for (var i = 0; i < selectCustomEquipments.Count; ++i)
+        {
+            var customEquipmentData = GameInstance.GetCustomEquipment(selectCustomEquipments[i]);
+            if (customEquipmentData != null &&
+                !customEquipmentDict.ContainsKey(customEquipmentData.containerIndex))
+            {
+                customEquipmentDict[customEquipmentData.containerIndex] = customEquipmentData;
+                if (characterModel != null)
+                    characterModel.SetCustomModel(customEquipmentData.containerIndex, customEquipmentData.modelObject);
+            }
+        }
+        UpdateCharacterModelHiddingState();
+    }
+
     public void ChangeWeapon(WeaponData weaponData)
     {
         if (weaponData == null)
             return;
-        selectWeapon = weaponData.GetId();
+        selectWeapon = weaponData.GetHashId();
     }
 
     public void UpdateCharacterModelHiddingState()
@@ -817,7 +855,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Server]
     public void ServerRevive()
     {
-        if (!string.IsNullOrEmpty(defaultSelectWeapon))
+        if (defaultSelectWeapon != 0)
             selectWeapon = defaultSelectWeapon;
         isPlayingAttackAnim = false;
         isDead = false;

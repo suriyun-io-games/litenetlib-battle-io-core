@@ -112,17 +112,17 @@ public class MonsterEntity : CharacterEntity
         // Override base function to changes functionality, to do nothing
     }
 
-    protected override void OnHeadChanged(string value)
+    protected override void OnHeadChanged(int value)
     {
         // Override base function to changes functionality, to do nothing
     }
 
-    protected override void OnCharacterChanged(string value)
+    protected override void OnCharacterChanged(int value)
     {
         // Override base function to changes functionality, to do nothing
     }
 
-    protected override void OnWeaponChanged(string value)
+    protected override void OnWeaponChanged(int value)
     {
         // Override base function to changes functionality, to do nothing
     }

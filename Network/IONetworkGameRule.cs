@@ -31,16 +31,17 @@ public class IONetworkGameRule : BaseNetworkGameRule
         botEntity.playerName = bot.name;
         botEntity.selectHead = bot.GetSelectHead();
         botEntity.selectCharacter = bot.GetSelectCharacter();
-        botEntity.selectWeapon = bot.GetSelectWeapon();
         if (startWeapon != null)
-            botEntity.selectWeapon = startWeapon.GetId();
+            botEntity.selectWeapon = startWeapon.GetHashId();
+        else
+            botEntity.selectWeapon = bot.GetSelectWeapon();
         return botEntity;
     }
 
     public virtual void NewPlayer(CharacterEntity character)
     {
         if (startWeapon != null)
-            character.selectWeapon = startWeapon.GetId();
+            character.selectWeapon = startWeapon.GetHashId();
     }
 
     protected override void EndMatch()

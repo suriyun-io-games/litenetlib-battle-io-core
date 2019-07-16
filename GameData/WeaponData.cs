@@ -49,7 +49,7 @@ public class WeaponData : ItemData
             var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage);
             var msg = new OpMsgCharacterAttack();
-            msg.weaponId = GetId();
+            msg.weaponId = GetHashId();
             msg.position = position;
             msg.direction = direction;
             msg.attackerNetId = attacker.netId;

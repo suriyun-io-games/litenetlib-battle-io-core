@@ -15,9 +15,19 @@ public class GameNetworkManager : BaseNetworkGameManager
     {
         var msg = new JoinMessage();
         msg.playerName = PlayerSave.GetPlayerName();
-        msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetId();
-        msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetId();
-        msg.selectWeapon = GameInstance.GetAvailableWeapon(PlayerSave.GetWeapon()).GetId();
+        msg.selectHead = GameInstance.GetAvailableHead(PlayerSave.GetHead()).GetHashId();
+        msg.selectCharacter = GameInstance.GetAvailableCharacter(PlayerSave.GetCharacter()).GetHashId();
+        msg.selectWeapon = GameInstance.GetAvailableWeapon(PlayerSave.GetWeapon()).GetHashId();
+        // Custom Equipments
+        var savedCustomEquipments = PlayerSave.GetCustomEquipments();
+        var selectCustomEquipments = new List<int>();
+        foreach (var savedCustomEquipment in savedCustomEquipments)
+        {
+            var data = GameInstance.GetAvailableCustomEquipment(savedCustomEquipment.Value);
+            if (data != null)
+                selectCustomEquipments.Add(data.GetHashId());
+        }
+        msg.selectCustomEquipments = selectCustomEquipments.ToArray();
         return msg;
     }
 
@@ -86,6 +96,10 @@ public class GameNetworkManager : BaseNetworkGameManager
         character.selectHead = joinMessage.selectHead;
         character.selectCharacter = joinMessage.selectCharacter;
         character.selectWeapon = joinMessage.selectWeapon;
+        foreach (var customEquipment in joinMessage.selectCustomEquipments)
+        {
+            character.selectCustomEquipments.Add(customEquipment);
+        }
         character.extra = joinMessage.extra;
         if (gameRule != null && gameRule is IONetworkGameRule)
         {
@@ -123,9 +137,10 @@ public class GameNetworkManager : BaseNetworkGameManager
     public class JoinMessage : MessageBase
     {
         public string playerName;
-        public string selectHead;
-        public string selectCharacter;
-        public string selectWeapon;
+        public int selectHead;
+        public int selectCharacter;
+        public int selectWeapon;
+        public int[] selectCustomEquipments;
         public string extra;
     }
 }
