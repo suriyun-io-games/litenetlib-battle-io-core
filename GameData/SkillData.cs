@@ -1,36 +1,51 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class WeaponData : ItemData
+public class SkillData : ScriptableObject
 {
-    public GameObject rightHandObject;
-    public GameObject leftHandObject;
-    public GameObject shieldObject;
-    public List<AttackAnimation> attackAnimations;
+    public string GetId()
+    {
+        return name;
+    }
+
+    public int GetHashId()
+    {
+        return GetId().MakeHashId();
+    }
+    
+    [Range(0, 7)]
+    public sbyte hotkeyId;
+    public Sprite icon;
+    public AttackAnimation attackAnimation;
     public DamageEntity damagePrefab;
+    [Tooltip("This will increase to weapon damage to calculate skill damage" +
+        "Ex. weaponDamage => 10 * this => 1, skill damage = 10 + 1 = 11")]
+    public int increaseDamage;
+    [Tooltip("This will multiplies to weapon damage then increase to weapon damage to calculate skill damage." +
+        "Ex. weaponDamage => 10 * this => 0.1, skill damage = 10 + (10 * 0.1) = 11")]
+    public float increaseDamageByRate;
+    public int spreadDamages = 0;
+    public float coolDown = 3;
     [Header("SFX")]
     public AudioClip[] attackFx;
-    public int weaponAnimId;
-    public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
+    public void Launch(CharacterEntity attacker)
     {
         if (attacker == null || !NetworkServer.active)
             return;
 
         var characterColliders = Physics.OverlapSphere(attacker.TempTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
         var gameplayManager = GameplayManager.Singleton;
-        var spread = attacker.TotalSpreadDamages;
-        var damage = (float)attacker.TotalAttack;
+        var spread = 1 + spreadDamages;
+        var damage = (float)attacker.TotalAttack + increaseDamage + (attacker.TotalAttack * increaseDamageByRate);
         damage += Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage;
 
         var addRotationX = 0f;
         var addRotationY = 0f;
         var addingRotationY = 360f / spread;
-        
+
         if (spread <= 16)
         {
             addRotationY = (-(spread - 1) * 15f);
@@ -40,20 +55,20 @@ public class WeaponData : ItemData
         for (var i = 0; i < spread; ++i)
         {
             Transform launchTransform;
-            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
+            attacker.GetDamageLaunchTransform(false, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
             var position = launchTransform.position;
             var direction = attacker.TempTransform.forward;
 
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage);
-            damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_DAMAGE_HIT;
+            damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_SKILL_HIT;
             damageEntity.relateDataId = GetHashId();
 
-            var msg = new OpMsgCharacterAttack();
-            msg.weaponId = GetHashId();
+            var msg = new OpMsgCharacterUseSkill();
+            msg.skillId = GetHashId();
             msg.position = position;
             msg.direction = direction;
             msg.attackerNetId = attacker.netId;
@@ -69,21 +84,6 @@ public class WeaponData : ItemData
             addRotationY += addingRotationY;
         }
 
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN, GetHashId());
-    }
-
-    public void SetupAnimations()
-    {
-        foreach (var attackAnimation in attackAnimations)
-        {
-            AttackAnimations[attackAnimation.actionId] = attackAnimation;
-        }
-    }
-
-    public AttackAnimation GetRandomAttackAnimation()
-    {
-        var list = AttackAnimations.Values.ToList();
-        var randomedIndex = Random.Range(0, list.Count);
-        return list[randomedIndex];
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId());
     }
 }

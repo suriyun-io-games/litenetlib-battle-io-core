@@ -10,6 +10,7 @@ public abstract class ItemData : InGameProductData
     [Tooltip("If this is true, player have to buy this item to unlock and able to use.")]
     public bool isLock;
     public CharacterStats stats;
+    public SkillData[] skills;
 
     public virtual bool IsUnlock()
     {

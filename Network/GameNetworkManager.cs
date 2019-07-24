@@ -68,11 +68,20 @@ public class GameNetworkManager : BaseNetworkGameManager
     {
         base.OnStartClient(client);
         client.RegisterHandler(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
+        client.RegisterHandler(new OpMsgCharacterUseSkill().OpId, ReadMsgCharacterUseSkill);
     }
 
     protected void ReadMsgCharacterAttack(NetworkMessage netMsg)
     {
         var msg = netMsg.ReadMessage<OpMsgCharacterAttack>();
+        // Instantiates damage entities on clients only
+        if (!NetworkServer.active)
+            DamageEntity.InstantiateNewEntity(msg);
+    }
+
+    protected void ReadMsgCharacterUseSkill(NetworkMessage netMsg)
+    {
+        var msg = netMsg.ReadMessage<OpMsgCharacterUseSkill>();
         // Instantiates damage entities on clients only
         if (!NetworkServer.active)
             DamageEntity.InstantiateNewEntity(msg);

@@ -22,6 +22,10 @@ public class DamageEntity : MonoBehaviour
     private float addRotationY;
     [HideInInspector]
     public int weaponDamage;
+    [HideInInspector]
+    public byte hitEffectType;
+    [HideInInspector]
+    public int relateDataId;
 
     private CharacterEntity attacker;
     public CharacterEntity Attacker
@@ -181,7 +185,7 @@ public class DamageEntity : MonoBehaviour
             var gameplayManager = GameplayManager.Singleton;
             float damage = Attacker.TotalAttack;
             damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
-            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage));
+            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage), hitEffectType, relateDataId);
         }
     }
 
@@ -198,21 +202,21 @@ public class DamageEntity : MonoBehaviour
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
     {
-        return InstantiateNewEntity(msg.weaponId, msg.isLeftHandWeapon, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+        WeaponData weaponData = null;
+        if (GameInstance.Weapons.TryGetValue(msg.weaponId, out weaponData))
+        {
+            return InstantiateNewEntity(weaponData.damagePrefab, msg.isLeftHandWeapon, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+        }
+        return null;
     }
 
-    public static DamageEntity InstantiateNewEntity(
-        int weaponId,
-        bool isLeftHandWeapon,
-        Vector3 position,
-        Vector3 direction,
-        NetworkInstanceId attackerNetId,
-        float addRotationX,
-        float addRotationY)
+    public static DamageEntity InstantiateNewEntity(OpMsgCharacterUseSkill msg)
     {
-        WeaponData weaponData = null;
-        if (GameInstance.Weapons.TryGetValue(weaponId, out weaponData))
-            return InstantiateNewEntity(weaponData.damagePrefab, isLeftHandWeapon, position, direction, attackerNetId, addRotationX, addRotationY);
+        SkillData skillData = null;
+        if (GameInstance.Skills.TryGetValue(msg.skillId, out skillData))
+        {
+            return InstantiateNewEntity(skillData.damagePrefab, false, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+        }
         return null;
     }
 

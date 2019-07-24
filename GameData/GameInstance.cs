@@ -27,6 +27,7 @@ public class GameInstance : BaseNetworkGameInstance
     public static readonly Dictionary<int, CharacterData> Characters = new Dictionary<int, CharacterData>();
     public static readonly Dictionary<int, WeaponData> Weapons = new Dictionary<int, WeaponData>();
     public static readonly Dictionary<int, CustomEquipmentData> CustomEquipments = new Dictionary<int, CustomEquipmentData>();
+    public static readonly Dictionary<int, SkillData> Skills = new Dictionary<int, SkillData>();
     protected override void Awake()
     {
         base.Awake();
@@ -50,11 +51,16 @@ public class GameInstance : BaseNetworkGameInstance
         {
             Characters[character.GetHashId()] = character;
         }
-
+        
+        Skills.Clear();
         Weapons.Clear();
         foreach (var weapon in weapons)
         {
             weapon.SetupAnimations();
+            foreach (var skill in weapon.skills)
+            {
+                Skills[skill.GetHashId()] = skill;
+            }
             Weapons[weapon.GetHashId()] = weapon;
         }
 

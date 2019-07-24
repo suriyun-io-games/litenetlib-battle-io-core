@@ -12,6 +12,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public const byte RPC_EFFECT_DAMAGE_SPAWN = 0;
     public const byte RPC_EFFECT_DAMAGE_HIT = 1;
     public const byte RPC_EFFECT_TRAP_HIT = 2;
+    public const byte RPC_EFFECT_SKILL_SPAWN = 3;
+    public const byte RPC_EFFECT_SKILL_HIT = 4;
+
     public Transform damageLaunchTransform;
     public Transform effectTransform;
     public Transform characterModelTransform;
@@ -111,6 +114,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncVar, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
     public int attackingActionId;
 
+    [SyncVar, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
+    public sbyte usingSkillHotkeyId;
+
     [SyncVar]
     public CharacterStats addStats;
 
@@ -140,14 +146,25 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected bool isDashing;
     protected Vector2 dashInputMove;
     protected float dashingTime;
+    protected Dictionary<sbyte, SkillData> skills = new Dictionary<sbyte, SkillData>();
+    protected float[] lastSkillUseTimes = new float[8];
+    protected bool inputCancelUsingSkill;
+    protected sbyte holdingUseSkillHotkeyId;
+    protected sbyte releasedUseSkillHotkeyId;
 
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
     public bool isGround { get; private set; }
     public bool isPlayingAttackAnim { get; private set; }
+    public bool isPlayingUseSkillAnim { get; private set; }
     public float deathTime { get; private set; }
     public float invincibleTime { get; private set; }
     public int defaultSelectWeapon { get; private set; }
+
+    public Dictionary<sbyte, SkillData> Skills
+    {
+        get { return skills; }
+    }
 
     private bool isHidding;
     public bool IsHidding
@@ -341,6 +358,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         OnWeaponChanged(selectWeapon);
         OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
         attackingActionId = -1;
+        usingSkillHotkeyId = -1;
     }
 
     public override void OnStartLocalPlayer()
@@ -374,7 +392,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 GameNetworkManager.Singleton.StopHost();
 
             if (isServer)
+            {
                 attackingActionId = -1;
+                usingSkillHotkeyId = -1;
+            }
         }
 
         if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
@@ -432,13 +453,20 @@ public class CharacterEntity : BaseNetworkGameCharacter
         InputManager.useMobileInputOnNonMobile = isMobileInput;
 
         var canAttack = isMobileInput || !EventSystem.current.IsPointerOverGameObject();
+        // Reset input states
         inputMove = Vector2.zero;
         inputDirection = Vector2.zero;
         inputAttack = false;
+        if (inputCancelUsingSkill = InputManager.GetButton("CancelUsingSkill"))
+        {
+            holdingUseSkillHotkeyId = -1;
+            releasedUseSkillHotkeyId = -1;
+        }
+
         if (canControl)
         {
             inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
-            
+
             // Jump
             if (!inputJump)
                 inputJump = InputManager.GetButtonDown("Jump") && isGround && !isDashing;
@@ -449,16 +477,61 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 {
                     inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
                     if (canAttack)
+                    {
                         inputAttack = inputDirection.magnitude != 0;
+                        if (!inputAttack)
+                        {
+                            // Find out that player pressed on skill hotkey or not
+                            for (sbyte i = 0; i < 8; ++i)
+                            {
+                                inputDirection = new Vector2(InputManager.GetAxis("Skill X " + i, false), InputManager.GetAxis("Skill Y " + i, false));
+                                if (inputDirection.magnitude != 0 && holdingUseSkillHotkeyId < 0)
+                                {
+                                    // Start drag
+                                    holdingUseSkillHotkeyId = i;
+                                    releasedUseSkillHotkeyId = -1;
+                                    break;
+                                }
+                                if (inputDirection.magnitude != 0 && holdingUseSkillHotkeyId == i)
+                                {
+                                    // Holding
+                                    break;
+                                }
+                                if (inputDirection.magnitude == 0 && holdingUseSkillHotkeyId == i)
+                                {
+                                    // End drag
+                                    holdingUseSkillHotkeyId = -1;
+                                    releasedUseSkillHotkeyId = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(TempTransform.position)).normalized;
                     if (canAttack)
+                    {
                         inputAttack = InputManager.GetButton("Fire1");
+                        if (!inputAttack)
+                        {
+                            // Find out that player pressed on skill hotkey or not
+                            for (sbyte i = 0; i < 8; ++i)
+                            {
+                                if (InputManager.GetButton("Skill " + i) && holdingUseSkillHotkeyId < 0)
+                                {
+                                    // Break if use skill
+                                    holdingUseSkillHotkeyId = -1;
+                                    releasedUseSkillHotkeyId = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            
+
             // Dash
             if (!isDashing)
             {
@@ -508,8 +581,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         animator.SetBool("IsIdle", !animator.GetBool("IsDead") && !animator.GetBool("DoAction") && animator.GetBool("IsGround"));
 
-        if (attackingActionId >= 0 && !isPlayingAttackAnim)
-            StartCoroutine(AttackRoutine(attackingActionId));
+        if (attackingActionId >= 0 && usingSkillHotkeyId < 0 && !isPlayingAttackAnim)
+            StartCoroutine(AttackRoutine());
+
+        if (usingSkillHotkeyId >= 0 && !isPlayingUseSkillAnim)
+            StartCoroutine(UseSkillRoutine());
     }
 
     protected virtual float GetMoveSpeed()
@@ -544,7 +620,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
         var dashDirection = new Vector3(dashInputMove.x, 0, dashInputMove.y);
-
+        
         Move(isDashing ? dashDirection : moveDirection);
         Rotate(isDashing ? dashInputMove : inputDirection);
 
@@ -552,6 +628,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
             Attack();
         else
             StopAttack();
+
+        if (!inputCancelUsingSkill && releasedUseSkillHotkeyId >= 0 && GameplayManager.Singleton.CanAttack(this))
+        {
+            UseSkill(releasedUseSkillHotkeyId);
+            holdingUseSkillHotkeyId = -1;
+            releasedUseSkillHotkeyId = -1;
+        }
 
         var velocity = TempRigidbody.velocity;
         if (isGround && inputJump)
@@ -598,19 +681,37 @@ public class CharacterEntity : BaseNetworkGameCharacter
             launchTransform = damageLaunchTransform;
     }
 
-    protected void Attack()
+    public void Attack()
     {
         if (attackingActionId < 0 && isLocalPlayer)
             CmdAttack();
     }
 
-    protected void StopAttack()
+    public void StopAttack()
     {
         if (attackingActionId >= 0 && isLocalPlayer)
             CmdStopAttack();
     }
 
-    IEnumerator AttackRoutine(int actionId)
+    public void UseSkill(sbyte hotkeyId)
+    {
+        SkillData skill;
+        if (attackingActionId < 0 && 
+            usingSkillHotkeyId < 0 && 
+            isLocalPlayer && skills.TryGetValue(hotkeyId, out skill) &&
+            GetSkillCoolDownCount(hotkeyId) > skill.coolDown)
+        {
+            lastSkillUseTimes[hotkeyId] = Time.unscaledTime;
+            CmdUseSkill(hotkeyId);
+        }
+    }
+
+    public float GetSkillCoolDownCount(sbyte hotkeyId)
+    {
+        return Time.unscaledTime - lastSkillUseTimes[hotkeyId];
+    }
+
+    IEnumerator AttackRoutine()
     {
         if (!isPlayingAttackAnim && 
             Hp > 0 &&
@@ -621,52 +722,86 @@ public class CharacterEntity : BaseNetworkGameCharacter
             var animator = characterModel.TempAnimator;
             AttackAnimation attackAnimation;
             if (weaponData != null &&
-                weaponData.AttackAnimations.TryGetValue(actionId, out attackAnimation))
+                weaponData.AttackAnimations.TryGetValue(attackingActionId, out attackAnimation))
             {
-                // Play attack animation
-                animator.SetBool("DoAction", false);
-                yield return new WaitForEndOfFrame();
-                animator.SetBool("DoAction", true);
-                animator.SetInteger("ActionID", attackAnimation.actionId);
-
-                // Wait to launch damage entity
-                var speed = attackAnimation.speed;
-                var animationDuration = attackAnimation.animationDuration;
-                var launchDuration = attackAnimation.launchDuration;
-                if (launchDuration > animationDuration)
-                    launchDuration = animationDuration;
-                yield return new WaitForSeconds(launchDuration / speed);
-
-                // Launch damage entity on server only
-                if (isServer)
-                    weaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
-
-                // Random play shoot sounds
-                if (weaponData.attackFx != null && weaponData.attackFx.Length > 0 && AudioManager.Singleton != null)
-                    AudioSource.PlayClipAtPoint(weaponData.attackFx[Random.Range(0, weaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
-
-                // Wait till animation end
-                yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
+                yield return StartCoroutine(PlayAttackAnimationRoutine(animator, attackAnimation, weaponData.attackFx, () =>
+                {
+                    // Launch damage entity on server only
+                    if (isServer)
+                        weaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
+                }));
+                // If player still attacking, random new attacking action id
+                if (isServer && attackingActionId >= 0 && weaponData != null)
+                    attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
             }
-            // If player still attacking, random new attacking action id
-            if (isServer && attackingActionId >= 0 && weaponData != null)
-                attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
-            yield return new WaitForEndOfFrame();
-
-            // Attack animation ended
-            animator.SetBool("DoAction", false);
             isPlayingAttackAnim = false;
         }
     }
 
+    IEnumerator UseSkillRoutine()
+    {
+        if (!isPlayingUseSkillAnim &&
+            Hp > 0 &&
+            characterModel != null &&
+            characterModel.TempAnimator != null)
+        {
+            isPlayingUseSkillAnim = true;
+            var animator = characterModel.TempAnimator;
+            SkillData skillData;
+            if (skills.TryGetValue(usingSkillHotkeyId, out skillData))
+            {
+                yield return StartCoroutine(PlayAttackAnimationRoutine(animator, skillData.attackAnimation, skillData.attackFx, () =>
+                {
+                    // Launch damage entity on server only
+                    if (isServer)
+                        skillData.Launch(this);
+                }));
+            }
+            usingSkillHotkeyId = -1;
+            isPlayingUseSkillAnim = false;
+        }
+    }
+
+    IEnumerator PlayAttackAnimationRoutine(Animator animator, AttackAnimation attackAnimation, AudioClip[] attackFx, System.Action onAttack)
+    {
+        if (animator != null && attackAnimation != null)
+        {
+            // Play attack animation
+            animator.SetBool("DoAction", false);
+            yield return new WaitForEndOfFrame();
+            animator.SetBool("DoAction", true);
+            animator.SetInteger("ActionID", attackAnimation.actionId);
+
+            // Wait to launch damage entity
+            var speed = attackAnimation.speed;
+            var animationDuration = attackAnimation.animationDuration;
+            var launchDuration = attackAnimation.launchDuration;
+            if (launchDuration > animationDuration)
+                launchDuration = animationDuration;
+            yield return new WaitForSeconds(launchDuration / speed);
+
+            onAttack.Invoke();
+
+            // Random play shoot sounds
+            if (attackFx != null && attackFx.Length > 0 && AudioManager.Singleton != null)
+                AudioSource.PlayClipAtPoint(attackFx[Random.Range(0, weaponData.attackFx.Length - 1)], TempTransform.position, AudioManager.Singleton.sfxVolumeSetting.Level);
+
+            // Wait till animation end
+            yield return new WaitForSeconds((animationDuration - launchDuration) / speed);
+
+            // Attack animation ended
+            animator.SetBool("DoAction", false);
+        }
+    }
+
     [Server]
-    public void ReceiveDamage(CharacterEntity attacker, int damage)
+    public void ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
     {
         var gameplayManager = GameplayManager.Singleton;
         if (Hp <= 0 || isInvincible)
             return;
 
-        RpcEffect(attacker.netId, RPC_EFFECT_DAMAGE_HIT);
+        RpcEffect(attacker.netId, type, dataId);
         if (!gameplayManager.CanReceiveDamage(this))
             return;
 
@@ -729,6 +864,42 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return weaponData.damagePrefab.GetAttackRange();
     }
 
+    protected void UpdateSkills()
+    {
+        skills.Clear();
+        if (characterData != null)
+        {
+            foreach (var skill in characterData.skills)
+            {
+                skills[skill.hotkeyId] = skill;
+            }
+        }
+        if (headData != null)
+        {
+            foreach (var skill in headData.skills)
+            {
+                skills[skill.hotkeyId] = skill;
+            }
+        }
+        if (weaponData != null)
+        {
+            foreach (var skill in weaponData.skills)
+            {
+                skills[skill.hotkeyId] = skill;
+            }
+        }
+        if (customEquipmentDict.Count > 0)
+        {
+            foreach (var customEquipment in customEquipmentDict.Values)
+            {
+                foreach (var skill in customEquipment.skills)
+                {
+                    skills[skill.hotkeyId] = skill;
+                }
+            }
+        }
+    }
+
     protected virtual void OnCharacterChanged(int value)
     {
         selectCharacter = value;
@@ -755,6 +926,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         characterModel.gameObject.SetActive(true);
         UpdateCharacterModelHiddingState();
+        UpdateSkills();
     }
 
     protected virtual void OnHeadChanged(int value)
@@ -764,6 +936,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (characterModel != null && headData != null)
             characterModel.SetHeadModel(headData.modelObject);
         UpdateCharacterModelHiddingState();
+        UpdateSkills();
     }
 
     protected virtual void OnWeaponChanged(int value)
@@ -778,6 +951,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (characterModel != null && weaponData != null)
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
         UpdateCharacterModelHiddingState();
+        UpdateSkills();
     }
 
     protected virtual void OnCustomEquipmentsChanged(SyncList<int>.Operation op, int itemIndex)
@@ -797,6 +971,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             }
         }
         UpdateCharacterModelHiddingState();
+        UpdateSkills();
     }
 
     public void ChangeWeapon(WeaponData weaponData)
@@ -860,6 +1035,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         isPlayingAttackAnim = false;
         isDead = false;
         Hp = TotalHp;
+        holdingUseSkillHotkeyId = -1;
+        releasedUseSkillHotkeyId = -1;
     }
 
     [Command]
@@ -894,6 +1071,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Command]
+    public void CmdUseSkill(sbyte hotkeyId)
+    {
+        if (skills.ContainsKey(hotkeyId))
+            usingSkillHotkeyId = hotkeyId;
+    }
+
+    [Command]
     public void CmdAddAttribute(string name)
     {
         if (statPoint > 0)
@@ -919,19 +1103,18 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [ClientRpc]
-    public void RpcEffect(NetworkInstanceId triggerId, byte effectType)
+    public void RpcEffect(NetworkInstanceId triggerId, byte effectType, int dataId)
     {
         GameObject triggerObject = isServer ? NetworkServer.FindLocalObject(triggerId) : ClientScene.FindLocalObject(triggerId);
         if (triggerObject != null)
         {
             if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
             {
-                var attacker = triggerObject.GetComponent<CharacterEntity>();
-                if (attacker != null &&
-                    attacker.weaponData != null &&
-                    attacker.weaponData.damagePrefab != null)
+                WeaponData weaponData;
+                if (GameInstance.Weapons.TryGetValue(dataId, out weaponData) &&
+                    weaponData.damagePrefab != null)
                 {
-                    var damagePrefab = attacker.weaponData.damagePrefab;
+                    var damagePrefab = weaponData.damagePrefab;
                     switch (effectType)
                     {
                         case RPC_EFFECT_DAMAGE_SPAWN:
@@ -948,6 +1131,24 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 var trap = triggerObject.GetComponent<TrapEntity>();
                 if (trap != null)
                     EffectEntity.PlayEffect(trap.hitEffectPrefab, effectTransform);
+            }
+            else if (effectType == RPC_EFFECT_SKILL_SPAWN || effectType == RPC_EFFECT_SKILL_HIT)
+            {
+                SkillData skillData;
+                if (GameInstance.Skills.TryGetValue(dataId, out skillData) &&
+                    skillData.damagePrefab != null)
+                {
+                    var damagePrefab = skillData.damagePrefab;
+                    switch (effectType)
+                    {
+                        case RPC_EFFECT_SKILL_SPAWN:
+                            EffectEntity.PlayEffect(damagePrefab.spawnEffectPrefab, effectTransform);
+                            break;
+                        case RPC_EFFECT_SKILL_HIT:
+                            EffectEntity.PlayEffect(damagePrefab.hitEffectPrefab, effectTransform);
+                            break;
+                    }
+                }
             }
         }
     }
