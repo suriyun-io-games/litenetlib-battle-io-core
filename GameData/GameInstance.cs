@@ -57,9 +57,12 @@ public class GameInstance : BaseNetworkGameInstance
         foreach (var weapon in weapons)
         {
             weapon.SetupAnimations();
-            foreach (var skill in weapon.skills)
+            if (weapon.skills != null)
             {
-                Skills[skill.GetHashId()] = skill;
+                foreach (var skill in weapon.skills)
+                {
+                    Skills[skill.GetHashId()] = skill;
+                }
             }
             Weapons[weapon.GetHashId()] = weapon;
         }
