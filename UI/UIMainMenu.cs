@@ -32,6 +32,7 @@ public class UIMainMenu : MonoBehaviour
     private int selectCharacter = 0;
     private int selectHead = 0;
     private int selectWeapon = 0;
+    private bool readyToUpdate;
     // Showing character / items
     public CharacterModel characterModel;
     public CharacterData characterData;
@@ -98,11 +99,21 @@ public class UIMainMenu : MonoBehaviour
 
     private void Start()
     {
+        StartCoroutine(StartRoutine());
+    }
+
+    private IEnumerator StartRoutine()
+    {
+        yield return null;
         OnClickLoadData();
+        readyToUpdate = true;
     }
 
     private void Update()
     {
+        if (!readyToUpdate)
+            return;
+
         if (textSelectCharacter != null)
             textSelectCharacter.text = (SelectCharacter + 1) + "/" + (MaxCharacter + 1);
         if (textSelectHead != null)
