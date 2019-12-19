@@ -172,9 +172,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
         get { return isHidding; }
         set
         {
-            if (isHidding == value)
-                return;
-
             isHidding = value;
             var renderers = GetComponentsInChildren<Renderer>();
             foreach (var renderer in renderers)
