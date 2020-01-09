@@ -64,6 +64,7 @@ public class DamageEntity : MonoBehaviour
 
     private void Awake()
     {
+        gameObject.layer = Physics.IgnoreRaycastLayer;
         var collider = GetComponent<Collider>();
         collider.isTrigger = true;
     }
@@ -136,7 +137,7 @@ public class DamageEntity : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.GetComponent<PowerUpEntity>() != null || other.GetComponent<DamageEntity>())
+        if (other.gameObject.layer == Physics.IgnoreRaycastLayer)
             return;
 
         var otherCharacter = other.GetComponent<CharacterEntity>();
