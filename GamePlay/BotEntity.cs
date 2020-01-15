@@ -34,6 +34,7 @@ public class BotEntity : CharacterEntity
     private float lastAttackTime;
     private float randomDashDuration;
     private CharacterEntity enemy;
+    private Vector3 dashDirection;
 
     public override void OnStartServer()
     {
@@ -132,12 +133,17 @@ public class BotEntity : CharacterEntity
         if (Time.unscaledTime - dashingTime >= randomDashDuration && !isDashing)
         {
             randomDashDuration = dashDuration + Random.Range(randomDashDurationMin, randomDashDurationMax);
+            dashDirection = CacheTransform.forward;
+            dashDirection.y = 0;
+            dashDirection.Normalize();
             isDashing = true;
+            dashingTime = Time.unscaledTime;
+            CmdDash();
         }
 
         // Gets a vector that points from the player's position to the target's.
         if (!IsReachedTargetPosition())
-            Move((targetPosition - CacheTransform.position).normalized);
+            Move(isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized);
 
         if (IsReachedTargetPosition())
         {
