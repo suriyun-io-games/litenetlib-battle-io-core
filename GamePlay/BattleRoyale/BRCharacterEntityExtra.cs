@@ -77,12 +77,12 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         var brGameManager = GameplayManager.Singleton as BRGameplayManager;
         if (brGameManager == null)
             return;
-
+        var botEntity = TempCharacterEntity as BotEntity;
         // Monster entity does not have to move following the air plane
         if (isServer && TempCharacterEntity is MonsterEntity)
         {
-            if (!TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = true;
+            if (!TempCharacterEntity.CacheRigidbody.useGravity)
+                TempCharacterEntity.CacheRigidbody.useGravity = true;
             if (!TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = true;
             TempCharacterEntity.IsHidding = false;
@@ -105,6 +105,12 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 if (distance > currentRadius)
                     TempCharacterEntity.Hp -= Mathf.CeilToInt(brGameManager.CurrentCircleHpRateDps * TempCharacterEntity.TotalHp);
                 lastCircleCheckTime = Time.realtimeSinceStartup;
+                if (botEntity != null)
+                {
+                    botEntity.isFixRandomMoveAroundPoint = currentRadius > 0 && distance > currentRadius;
+                    botEntity.fixRandomMoveAroundPoint = centerPosition;
+                    botEntity.fixRandomMoveAroundDistance = currentRadius;
+                }
             }
         }
 
@@ -115,8 +121,8 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
             }
-            if (!TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = true;
+            if (!TempCharacterEntity.CacheRigidbody.useGravity)
+                TempCharacterEntity.CacheRigidbody.useGravity = true;
             if (!TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = true;
             TempCharacterEntity.IsHidding = false;
@@ -147,8 +153,8 @@ public class BRCharacterEntityExtra : NetworkBehaviour
                 StartCoroutine(BotSpawnRoutine());
             }
             // Hide character and disable physics while in airplane
-            if (TempCharacterEntity.TempRigidbody.useGravity)
-                TempCharacterEntity.TempRigidbody.useGravity = false;
+            if (TempCharacterEntity.CacheRigidbody.useGravity)
+                TempCharacterEntity.CacheRigidbody.useGravity = false;
             if (TempCharacterEntity.enabled)
                 TempCharacterEntity.enabled = false;
             TempCharacterEntity.IsHidding = true;
@@ -170,7 +176,7 @@ public class BRCharacterEntityExtra : NetworkBehaviour
         if (brGameManager.currentState != BRState.WaitingForPlayers && !isSpawned && isServer)
         {
             var position = TempCharacterEntity.GetSpawnPosition();
-            TempCharacterEntity.TempTransform.position = position;
+            TempCharacterEntity.CacheTransform.position = position;
             if (TempCharacterEntity.connectionToClient != null)
                 TempCharacterEntity.TargetSpawn(TempCharacterEntity.connectionToClient, position);
             isSpawned = true;
@@ -240,9 +246,9 @@ public class BRCharacterEntityExtra : NetworkBehaviour
     [ClientRpc]
     public void RpcCharacterSpawned(Vector3 spawnPosition)
     {
-        TempCharacterEntity.TempTransform.position = spawnPosition;
-        TempCharacterEntity.TempRigidbody.useGravity = true;
-        TempCharacterEntity.TempRigidbody.isKinematic = false;
+        TempCharacterEntity.CacheTransform.position = spawnPosition;
+        TempCharacterEntity.CacheRigidbody.useGravity = true;
+        TempCharacterEntity.CacheRigidbody.isKinematic = false;
     }
 
     [ClientRpc]

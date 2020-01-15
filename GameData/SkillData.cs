@@ -36,7 +36,7 @@ public class SkillData : ScriptableObject
         if (attacker == null || !NetworkServer.active)
             return;
 
-        var characterColliders = Physics.OverlapSphere(attacker.TempTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
+        var characterColliders = Physics.OverlapSphere(attacker.CacheTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
         var gameplayManager = GameplayManager.Singleton;
         var spread = 1 + spreadDamages;
         var damage = (float)attacker.TotalAttack + increaseDamage + (attacker.TotalAttack * increaseDamageByRate);
@@ -60,13 +60,14 @@ public class SkillData : ScriptableObject
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
             var position = launchTransform.position;
-            var direction = attacker.TempTransform.forward;
+            var direction = attacker.CacheTransform.forward;
 
             var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage);
             damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_SKILL_HIT;
             damageEntity.relateDataId = GetHashId();
 
+            // Telling nearby clients that the character use skills
             var msg = new OpMsgCharacterUseSkill();
             msg.skillId = GetHashId();
             msg.position = position;
