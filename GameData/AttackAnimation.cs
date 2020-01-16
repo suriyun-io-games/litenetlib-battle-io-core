@@ -11,4 +11,6 @@ public class AttackAnimation
     public float launchDuration;
     public float speed = 1f;
     public bool isAnimationForLeftHandWeapon;
+    [Tooltip("If this is empty it will launch `Damage Entity` from `Weapon Data`")]
+    public DamageEntity damagePrefab;
 }

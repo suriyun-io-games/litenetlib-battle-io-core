@@ -16,7 +16,7 @@ public class WeaponData : ItemData
     public int weaponAnimId;
     public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, bool isLeftHandWeapon)
+    public void Launch(CharacterEntity attacker, int actionId)
     {
         if (attacker == null || !NetworkServer.active)
             return;
@@ -40,14 +40,17 @@ public class WeaponData : ItemData
         for (var i = 0; i < spread; ++i)
         {
             Transform launchTransform;
-            attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
+            attacker.GetDamageLaunchTransform(AttackAnimations[actionId].isAnimationForLeftHandWeapon, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
             var position = launchTransform.position;
             var direction = attacker.CacheTransform.forward;
 
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, isLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
+            var damagePrefab = this.damagePrefab;
+            if (AttackAnimations[actionId].damagePrefab != null)
+                damagePrefab = AttackAnimations[actionId].damagePrefab;
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, AttackAnimations[actionId].isAnimationForLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
             damageEntity.weaponDamage = Mathf.CeilToInt(damage);
             damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_DAMAGE_HIT;
             damageEntity.relateDataId = GetHashId();

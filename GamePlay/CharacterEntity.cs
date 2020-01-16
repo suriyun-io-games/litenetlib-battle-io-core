@@ -714,7 +714,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 {
                     // Launch damage entity on server only
                     if (isServer)
-                        weaponData.Launch(this, attackAnimation.isAnimationForLeftHandWeapon);
+                        weaponData.Launch(this, attackingActionId);
                 }));
                 // If player still attacking, random new attacking action id
                 if (isServer && attackingActionId >= 0 && weaponData != null)
