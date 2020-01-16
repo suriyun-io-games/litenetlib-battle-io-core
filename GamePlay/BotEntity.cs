@@ -15,6 +15,7 @@ public class BotEntity : CharacterEntity
     [Header("Bot config set here")]
     public float updateMovementDuration = 2f;
     public float attackDuration = 0f;
+    public float useSkillDuration = 3f;
     public float forgetEnemyDuration = 3f;
     public float randomDashDurationMin = 3f;
     public float randomDashDurationMax = 5f;
@@ -32,6 +33,7 @@ public class BotEntity : CharacterEntity
     private Vector3 targetPosition;
     private float lastUpdateMovementTime;
     private float lastAttackTime;
+    private float lastUseSkillTime;
     private float randomDashDuration;
     private CharacterEntity enemy;
     private Vector3 dashDirection;
@@ -185,13 +187,18 @@ public class BotEntity : CharacterEntity
     private bool RandomUseSkill(out sbyte hotkeyId)
     {
         hotkeyId = -1;
+        if (Time.unscaledTime - lastUseSkillTime < useSkillDuration)
+            return false;
         if (Skills == null || Skills.Count == 0)
             return false;
         hotkeyId = Skills.Keys.Skip(Random.Range(0, Skills.Count)).Take(1).First();
         SkillData skill;
         if (Skills.TryGetValue(hotkeyId, out skill) &&
             GetSkillCoolDownCount(hotkeyId) > skill.coolDown)
+        {
+            lastUseSkillTime = Time.unscaledTime;
             return true;
+        }
         hotkeyId = -1;
         return false;
     }
