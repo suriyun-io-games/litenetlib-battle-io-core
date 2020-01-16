@@ -8,7 +8,7 @@ public class BotEntity : CharacterEntity
 {
     public enum Characteristic
     {
-        Normal,
+        Aggressive,
         NoneAttack
     }
     public const float ReachedTargetDistance = 0.1f;
@@ -80,7 +80,7 @@ public class BotEntity : CharacterEntity
                 targetPosition = new Vector3(
                     enemy.CacheTransform.position.x + Random.Range(-1f, 1f) * detectEnemyDistance,
                     0,
-                    enemy.CacheTransform.position.z + Random.Range(-1, 1f) * detectEnemyDistance);
+                    enemy.CacheTransform.position.z + Random.Range(-1f, 1f) * detectEnemyDistance);
             }
             else if (isFixRandomMoveAroundPoint)
             {
@@ -101,11 +101,17 @@ public class BotEntity : CharacterEntity
         var rotatePosition = targetPosition;
         if (enemy == null || enemy.IsDead || Time.unscaledTime - lastAttackTime >= forgetEnemyDuration)
         {
+            enemy = null;
             // Try find enemy. If found move to target in next frame
-            if (FindEnemy(out enemy))
+            switch (characteristic)
             {
-                lastAttackTime = Time.unscaledTime;
-                lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
+                case Characteristic.Aggressive:
+                    if (FindEnemy(out enemy))
+                    {
+                        lastAttackTime = Time.unscaledTime;
+                        lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
+                    }
+                    break;
             }
         }
         else
@@ -117,15 +123,21 @@ public class BotEntity : CharacterEntity
         attackingActionId = -1;
         if (enemy != null)
         {
-            if (characteristic == Characteristic.Normal)
+            switch (characteristic)
             {
-                if (Time.unscaledTime - lastAttackTime >= attackDuration &&
+                case Characteristic.Aggressive:
+                    if (Time.unscaledTime - lastAttackTime >= attackDuration &&
                     Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
-                {
-                    // Attack when nearby enemy
-                    attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
-                    lastAttackTime = Time.unscaledTime;
-                }
+                    {
+                        // Attack when nearby enemy
+                        sbyte usingSkillHotkeyId;
+                        if (RandomUseSkill(out usingSkillHotkeyId))
+                            this.usingSkillHotkeyId = usingSkillHotkeyId;
+                        else
+                            attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+                        lastAttackTime = Time.unscaledTime;
+                    }
+                    break;
             }
         }
 
@@ -170,6 +182,20 @@ public class BotEntity : CharacterEntity
         CmdAddAttribute(WeightedRandomizer.From(dict).TakeOne().name);
     }
 
+    private bool RandomUseSkill(out sbyte hotkeyId)
+    {
+        hotkeyId = -1;
+        if (Skills == null || Skills.Count == 0)
+            return false;
+        hotkeyId = Skills.Keys.Skip(Random.Range(0, Skills.Count)).Take(1).First();
+        SkillData skill;
+        if (Skills.TryGetValue(hotkeyId, out skill) &&
+            GetSkillCoolDownCount(hotkeyId) > skill.coolDown)
+            return true;
+        hotkeyId = -1;
+        return false;
+    }
+
     private bool IsReachedTargetPosition()
     {
         if (enemy != null)
@@ -202,6 +228,24 @@ public class BotEntity : CharacterEntity
             // Find another position to move in next frame
             lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         }
+    }
+
+    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
+    {
+        if (base.ReceiveDamage(attacker, damage, type, dataId))
+        {
+            switch (characteristic)
+            {
+                case Characteristic.Aggressive:
+                    if (enemy == null)
+                        enemy = attacker;
+                    else if (Random.value > 0.5f)
+                        enemy = attacker;
+                    break;
+            }
+            return true;
+        }
+        return false;
     }
 
     public override void OnSpawn()

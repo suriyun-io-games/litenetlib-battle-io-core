@@ -6,8 +6,9 @@ public class MonsterEntity : CharacterEntity
 {
     public enum Characteristic
     {
-        Normal,
-        NoneAttack
+        Aggressive,
+        NoneAttack,
+        NoneAggressive,
     }
     public const float ReachedTargetDistance = 0.1f;
     [Header("Monster config set here")]
@@ -17,6 +18,7 @@ public class MonsterEntity : CharacterEntity
     public float forgetEnemyDuration = 3f;
     public float respawnDuration = 5f;
     public float detectEnemyDistance = 2f;
+    public float followEnemyDistance = 5f;
     public float turnSpeed = 5f;
     public Characteristic characteristic;
     public string monsterName;
@@ -151,8 +153,20 @@ public class MonsterEntity : CharacterEntity
             return;
         }
 
-        // Monster will update target movement when reached move target / hitting the walls / it's time
-        if (Time.unscaledTime - lastUpdateWanderTime >= updateWanderDuration)
+        if (enemy != null)
+        {
+            if (Vector3.Distance(spawnPosition, CacheTransform.position) >= followEnemyDistance)
+            {
+                targetPosition = spawnPosition;
+                targetPosition.y = 0;
+            }
+            else
+            {
+                targetPosition = enemy.CacheTransform.position;
+                targetPosition.y = 0;
+            }
+        }
+        else if (Time.unscaledTime - lastUpdateWanderTime >= updateWanderDuration)
         {
             lastUpdateWanderTime = Time.unscaledTime;
             targetPosition = new Vector3(
@@ -179,15 +193,18 @@ public class MonsterEntity : CharacterEntity
         attackingActionId = -1;
         if (enemy != null)
         {
-            if (characteristic == Characteristic.Normal)
+            switch (characteristic)
             {
-                if (Time.unscaledTime - lastAttackTime >= attackDuration &&
-                    Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
-                {
-                    // Attack when nearby enemy
-                    attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
-                    lastAttackTime = Time.unscaledTime;
-                }
+                case Characteristic.Aggressive:
+                case Characteristic.NoneAggressive:
+                    if (Time.unscaledTime - lastAttackTime >= attackDuration &&
+                        Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
+                    {
+                        // Attack when nearby enemy
+                        attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+                        lastAttackTime = Time.unscaledTime;
+                    }
+                    break;
             }
         }
 
@@ -230,6 +247,25 @@ public class MonsterEntity : CharacterEntity
                 enemy = character;
                 return true;
             }
+        }
+        return false;
+    }
+
+    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
+    {
+        if (base.ReceiveDamage(attacker, damage, type, dataId))
+        {
+            switch (characteristic)
+            {
+                case Characteristic.Aggressive:
+                case Characteristic.NoneAggressive:
+                    if (enemy == null)
+                        enemy = attacker;
+                    else if (Random.value > 0.5f)
+                        enemy = attacker;
+                    break;
+            }
+            return true;
         }
         return false;
     }
