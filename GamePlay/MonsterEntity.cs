@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class MonsterEntity : CharacterEntity
@@ -15,6 +16,7 @@ public class MonsterEntity : CharacterEntity
     public float wanderDistanceAroundSpawnPosition = 1f;
     public float updateWanderDuration = 2f;
     public float attackDuration = 2f;
+    public float useSkillDuration = 3f;
     public float forgetEnemyDuration = 3f;
     public float respawnDuration = 5f;
     public float detectEnemyDistance = 2f;
@@ -35,6 +37,7 @@ public class MonsterEntity : CharacterEntity
     private Vector3 targetPosition;
     private float lastUpdateWanderTime;
     private float lastAttackTime;
+    private float lastUseSkillTime;
     private Vector3 spawnPosition;
     private CharacterEntity enemy;
 
@@ -157,7 +160,7 @@ public class MonsterEntity : CharacterEntity
         {
             if (Vector3.Distance(spawnPosition, CacheTransform.position) >= followEnemyDistance)
             {
-                targetPosition = spawnPosition;
+                targetPosition = CacheTransform.position;
                 targetPosition.y = 0;
             }
             else
@@ -201,7 +204,11 @@ public class MonsterEntity : CharacterEntity
                         Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
                     {
                         // Attack when nearby enemy
-                        attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
+                        sbyte usingSkillHotkeyId;
+                        if (RandomUseSkill(out usingSkillHotkeyId))
+                            this.usingSkillHotkeyId = usingSkillHotkeyId;
+                        else
+                            attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
                         lastAttackTime = Time.unscaledTime;
                     }
                     break;
@@ -221,6 +228,25 @@ public class MonsterEntity : CharacterEntity
         var rotateHeading = rotatePosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+    }
+
+    private bool RandomUseSkill(out sbyte hotkeyId)
+    {
+        hotkeyId = -1;
+        if (Time.unscaledTime - lastUseSkillTime < useSkillDuration)
+            return false;
+        if (Skills == null || Skills.Count == 0)
+            return false;
+        hotkeyId = Skills.Keys.Skip(Random.Range(0, Skills.Count)).Take(1).First();
+        SkillData skill;
+        if (Skills.TryGetValue(hotkeyId, out skill) &&
+            GetSkillCoolDownCount(hotkeyId) > skill.coolDown)
+        {
+            lastUseSkillTime = Time.unscaledTime;
+            return true;
+        }
+        hotkeyId = -1;
+        return false;
     }
 
     private bool IsReachedTargetPosition()
