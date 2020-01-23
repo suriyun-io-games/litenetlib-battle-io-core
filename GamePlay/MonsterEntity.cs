@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.Serialization;
 
 public class MonsterEntity : CharacterEntity
 {
@@ -14,7 +16,8 @@ public class MonsterEntity : CharacterEntity
     public const float ReachedTargetDistance = 0.1f;
     [Header("Monster config set here")]
     public float wanderDistanceAroundSpawnPosition = 1f;
-    public float updateWanderDuration = 2f;
+    [FormerlySerializedAs("updateWanderDuration")]
+    public float updateMovementDuration = 2f;
     public float attackDuration = 2f;
     public float useSkillDuration = 3f;
     public float forgetEnemyDuration = 3f;
@@ -34,8 +37,9 @@ public class MonsterEntity : CharacterEntity
     [Range(0, 100)]
     public int monsterTypeId;
 
+    private Queue<Vector3> navPaths;
     private Vector3 targetPosition;
-    private float lastUpdateWanderTime;
+    private float lastUpdateMovementTime;
     private float lastAttackTime;
     private float lastUseSkillTime;
     private Vector3 spawnPosition;
@@ -112,7 +116,7 @@ public class MonsterEntity : CharacterEntity
         playerName = monsterName;
         level = monsterLevel;
         spawnPosition = CacheTransform.position;
-        lastUpdateWanderTime = Time.unscaledTime - updateWanderDuration;
+        lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
         ServerSpawn(false);
     }
@@ -147,8 +151,7 @@ public class MonsterEntity : CharacterEntity
             attackingActionId = -1;
             return;
         }
-
-
+        
         if (Hp <= 0)
         {
             ServerRespawn(false);
@@ -158,24 +161,37 @@ public class MonsterEntity : CharacterEntity
 
         if (enemy != null)
         {
-            if (Vector3.Distance(spawnPosition, CacheTransform.position) >= followEnemyDistance)
+            if (Vector3.Distance(spawnPosition, enemy.CacheTransform.position) < followEnemyDistance)
             {
-                targetPosition = CacheTransform.position;
-                targetPosition.y = 0;
+                if (Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) >= GetAttackRange())
+                {
+                    GetMovePaths(new Vector3(enemy.CacheTransform.position.x, 0, enemy.CacheTransform.position.z));
+                }
+                else
+                {
+                    navPaths.Clear();
+                    targetPosition = CacheTransform.position;
+                    targetPosition.y = 0;
+                }
             }
             else
             {
-                targetPosition = enemy.CacheTransform.position;
+                navPaths.Clear();
+                targetPosition = CacheTransform.position;
                 targetPosition.y = 0;
             }
         }
-        else if (Time.unscaledTime - lastUpdateWanderTime >= updateWanderDuration)
+        
+        if (Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
         {
-            lastUpdateWanderTime = Time.unscaledTime;
-            targetPosition = new Vector3(
-                spawnPosition.x + Random.Range(-1f, 1f) * wanderDistanceAroundSpawnPosition,
-                0,
-                spawnPosition.z + Random.Range(-1f, 1f) * wanderDistanceAroundSpawnPosition);
+            lastUpdateMovementTime = Time.unscaledTime;
+            if (enemy == null)
+            {
+                GetMovePaths(new Vector3(
+                    spawnPosition.x + Random.Range(-1f, 1f) * wanderDistanceAroundSpawnPosition,
+                    0,
+                    spawnPosition.z + Random.Range(-1f, 1f) * wanderDistanceAroundSpawnPosition));
+            }
         }
 
         var rotatePosition = targetPosition;
@@ -184,7 +200,7 @@ public class MonsterEntity : CharacterEntity
             // Try find enemy
             if (FindEnemy(out enemy))
             {
-                lastAttackTime = Time.unscaledTime;
+                lastAttackTime = Time.unscaledTime - attackDuration;
             }
         }
         else
@@ -216,18 +232,42 @@ public class MonsterEntity : CharacterEntity
         }
 
         // Gets a vector that points from the player's position to the target's.
-        if (!IsReachedTargetPosition())
+        var isReachedTarget = IsReachedTargetPosition();
+        if (!isReachedTarget)
             Move((targetPosition - CacheTransform.position).normalized);
 
-        if (IsReachedTargetPosition())
+        if (isReachedTarget)
         {
             targetPosition = CacheTransform.position + (CacheTransform.forward * ReachedTargetDistance / 2f);
             CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
+            if (navPaths.Count > 0)
+                targetPosition = navPaths.Dequeue();
         }
         // Rotate to target
         var rotateHeading = rotatePosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+    }
+
+    private void GetMovePaths(Vector3 position)
+    {
+        NavMeshPath navPath = new NavMeshPath();
+        NavMeshHit navHit;
+        if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
+            NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
+        {
+            navPaths = new Queue<Vector3>(navPath.corners);
+            // Dequeue first path it's not require for future movement
+            navPaths.Dequeue();
+        }
+        // Initial queue
+        if (navPaths == null)
+            navPaths = new Queue<Vector3>();
+        // Set first target position immediately
+        if (navPaths.Count > 0)
+            targetPosition = navPaths.Dequeue();
+        else
+            targetPosition = position;
     }
 
     private bool RandomUseSkill(out sbyte hotkeyId)
@@ -275,6 +315,17 @@ public class MonsterEntity : CharacterEntity
             }
         }
         return false;
+    }
+
+    protected override void OnCollisionStay(Collision collision)
+    {
+        base.OnCollisionStay(collision);
+
+        if (collision.collider.CompareTag("Wall"))
+        {
+            // Find another position to move in next frame
+            lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
+        }
     }
 
     public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
