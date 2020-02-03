@@ -112,10 +112,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public bool isInvincible;
 
     [SyncVar, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
-    public int attackingActionId;
+    public short attackingActionId = -1;
 
     [SyncVar, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
-    public sbyte usingSkillHotkeyId;
+    public sbyte usingSkillHotkeyId = -1;
 
     [SyncVar]
     public CharacterStats addStats;
@@ -138,6 +138,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected HeadData headData;
     protected WeaponData weaponData;
     protected Dictionary<int, CustomEquipmentData> customEquipmentDict = new Dictionary<int, CustomEquipmentData>();
+    protected Dictionary<int, StatusEffectEntity> appliedStatusEffects = new Dictionary<int, StatusEffectEntity>();
     protected bool isMobileInput;
     protected Vector2 inputMove;
     protected Vector2 inputDirection;
@@ -149,8 +150,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected Dictionary<sbyte, SkillData> skills = new Dictionary<sbyte, SkillData>();
     protected float[] lastSkillUseTimes = new float[8];
     protected bool inputCancelUsingSkill;
-    protected sbyte holdingUseSkillHotkeyId;
-    protected sbyte releasedUseSkillHotkeyId;
+    protected sbyte holdingUseSkillHotkeyId = -1;
+    protected sbyte releasedUseSkillHotkeyId = -1;
 
     public bool isReady { get; private set; }
     public bool isDead { get; private set; }
@@ -202,6 +203,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
             {
                 foreach (var value in customEquipmentDict.Values)
                     stats += value.stats;
+            }
+            if (appliedStatusEffects != null)
+            {
+                foreach (var value in appliedStatusEffects.Values)
+                    stats += value.addStats;
             }
             return stats;
         }
@@ -705,13 +711,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
             characterModel.TempAnimator != null)
         {
             isPlayingAttackAnim = true;
-            var animator = characterModel.TempAnimator;
             AttackAnimation attackAnimation;
-            if (weaponData != null &&
+            if (weaponData != null && attackingActionId >= 0 && attackingActionId < 255 &&
                 weaponData.AttackAnimations.TryGetValue(attackingActionId, out attackAnimation))
             {
-                int actionId = attackingActionId;
-                yield return StartCoroutine(PlayAttackAnimationRoutine(animator, attackAnimation, weaponData.attackFx, () =>
+                byte actionId = (byte)attackingActionId;
+                yield return StartCoroutine(PlayAttackAnimationRoutine(attackAnimation, weaponData.attackFx, () =>
                 {
                     // Launch damage entity on server only
                     if (isServer)
@@ -733,11 +738,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
             characterModel.TempAnimator != null)
         {
             isPlayingUseSkillAnim = true;
-            var animator = characterModel.TempAnimator;
             SkillData skillData;
             if (skills.TryGetValue(usingSkillHotkeyId, out skillData))
             {
-                yield return StartCoroutine(PlayAttackAnimationRoutine(animator, skillData.attackAnimation, skillData.attackFx, () =>
+                yield return StartCoroutine(PlayAttackAnimationRoutine(skillData.attackAnimation, skillData.attackFx, () =>
                 {
                     // Launch damage entity on server only
                     if (isServer)
@@ -749,8 +753,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    IEnumerator PlayAttackAnimationRoutine(Animator animator, AttackAnimation attackAnimation, AudioClip[] attackFx, System.Action onAttack)
+    IEnumerator PlayAttackAnimationRoutine(AttackAnimation attackAnimation, AudioClip[] attackFx, System.Action onAttack)
     {
+        var animator = characterModel.TempAnimator;
         if (animator != null && attackAnimation != null)
         {
             // Play attack animation
@@ -782,7 +787,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [Server]
-    public virtual bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
+    public virtual bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)
     {
         if (Hp <= 0 || isInvincible)
             return false;
@@ -791,7 +796,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!gameplayManager.CanReceiveDamage(this, attacker))
             return false;
 
-        RpcEffect(attacker.netId, type, dataId);
+        RpcEffect(attacker.netId, type, dataId, actionId);
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;
@@ -806,6 +811,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
             }
             if (Hp == 0)
             {
+                var statusEffects = new List<StatusEffectEntity>(appliedStatusEffects.Values);
+                foreach (var statusEffect in statusEffects)
+                {
+                    if (statusEffect)
+                        Destroy(statusEffect.gameObject);
+                }
+                statusEffects.Clear();
                 if (onDead != null)
                     onDead.Invoke();
                 attacker.KilledTarget(this);
@@ -1091,7 +1103,37 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     [ClientRpc]
-    public void RpcEffect(NetworkInstanceId triggerId, byte effectType, int dataId)
+    public void RpcApplyStatusEffect(int dataId)
+    {
+        // Destroy applied status effect, because it cannot be stacked
+        RemoveAppliedStatusEffect(dataId);
+        StatusEffectEntity statusEffect;
+        if (GameInstance.StatusEffects.TryGetValue(dataId, out statusEffect) && Random.value <= statusEffect.applyRate)
+        {
+            // Found prefab, instantiates to character
+            statusEffect = Instantiate(statusEffect, transform.position, transform.rotation, transform);
+            // Just in case the game object might be not activated by default
+            statusEffect.gameObject.SetActive(true);
+            // Set applying character
+            statusEffect.Applied(this);
+            // Add to applied status effects
+            appliedStatusEffects[dataId] = statusEffect;
+        }
+    }
+
+    public void RemoveAppliedStatusEffect(int dataId)
+    {
+        StatusEffectEntity statusEffect;
+        if (appliedStatusEffects.TryGetValue(dataId, out statusEffect))
+        {
+            appliedStatusEffects.Remove(dataId);
+            if (statusEffect)
+                Destroy(statusEffect.gameObject);
+        }
+    }
+
+    [ClientRpc]
+    public void RpcEffect(NetworkInstanceId triggerId, byte effectType, int dataId, byte actionId)
     {
         GameObject triggerObject = isServer ? NetworkServer.FindLocalObject(triggerId) : ClientScene.FindLocalObject(triggerId);
         if (triggerObject != null)
@@ -1099,18 +1141,23 @@ public class CharacterEntity : BaseNetworkGameCharacter
             if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
             {
                 WeaponData weaponData;
-                if (GameInstance.Weapons.TryGetValue(dataId, out weaponData) &&
-                    weaponData.damagePrefab != null)
+                if (GameInstance.Weapons.TryGetValue(dataId, out weaponData))
                 {
                     var damagePrefab = weaponData.damagePrefab;
-                    switch (effectType)
+                    if (weaponData.AttackAnimations.ContainsKey(actionId) &&
+                        weaponData.AttackAnimations[actionId].damagePrefab != null)
+                        damagePrefab = weaponData.AttackAnimations[actionId].damagePrefab;
+                    if (damagePrefab)
                     {
-                        case RPC_EFFECT_DAMAGE_SPAWN:
-                            EffectEntity.PlayEffect(damagePrefab.spawnEffectPrefab, effectTransform);
-                            break;
-                        case RPC_EFFECT_DAMAGE_HIT:
-                            EffectEntity.PlayEffect(damagePrefab.hitEffectPrefab, effectTransform);
-                            break;
+                        switch (effectType)
+                        {
+                            case RPC_EFFECT_DAMAGE_SPAWN:
+                                EffectEntity.PlayEffect(damagePrefab.spawnEffectPrefab, effectTransform);
+                                break;
+                            case RPC_EFFECT_DAMAGE_HIT:
+                                EffectEntity.PlayEffect(damagePrefab.hitEffectPrefab, effectTransform);
+                                break;
+                        }
                     }
                 }
             }
