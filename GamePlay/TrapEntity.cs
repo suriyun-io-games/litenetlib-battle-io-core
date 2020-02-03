@@ -116,6 +116,6 @@ public class TrapEntity : NetworkBehaviour
 
         TriggerredTime[characterNetId] = time;
         character.Hp -= triggeredDamage;
-        character.RpcEffect(netId, CharacterEntity.RPC_EFFECT_TRAP_HIT, 0);
+        character.RpcEffect(netId, CharacterEntity.RPC_EFFECT_TRAP_HIT, 0, 0);
     }
 }

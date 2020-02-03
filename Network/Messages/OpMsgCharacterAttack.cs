@@ -14,8 +14,7 @@ public class OpMsgCharacterAttack : BaseOpMsg
     }
 
     public int weaponId;
-    public bool isLeftHandWeapon;
-    public Vector3 position;
+    public byte actionId;
     public Vector3 direction;
     public NetworkInstanceId attackerNetId;
     public float addRotationX;

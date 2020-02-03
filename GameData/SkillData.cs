@@ -20,6 +20,8 @@ public class SkillData : ScriptableObject
     public Sprite icon;
     public AttackAnimation attackAnimation;
     public DamageEntity damagePrefab;
+    [Tooltip("This status will be applied to user when use skill")]
+    public StatusEffectEntity statusEffectPrefab;
     [Tooltip("This will increase to weapon damage to calculate skill damage" +
         "Ex. weaponDamage => 10 * this => 1, skill damage = 10 + 1 = 11")]
     public int increaseDamage;
@@ -54,23 +56,23 @@ public class SkillData : ScriptableObject
 
         for (var i = 0; i < spread; ++i)
         {
-            Transform launchTransform;
-            attacker.GetDamageLaunchTransform(false, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            var position = launchTransform.position;
             var direction = attacker.CacheTransform.forward;
 
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, position, direction, attacker.netId, addRotationX, addRotationY);
-            damageEntity.weaponDamage = Mathf.CeilToInt(damage);
-            damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_SKILL_HIT;
-            damageEntity.relateDataId = GetHashId();
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, direction, attacker.netId, addRotationX, addRotationY);
+            if (damageEntity)
+            {
+                damageEntity.weaponDamage = Mathf.CeilToInt(damage);
+                damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_SKILL_HIT;
+                damageEntity.relateDataId = GetHashId();
+                damageEntity.actionId = 0;
+            }
 
             // Telling nearby clients that the character use skills
             var msg = new OpMsgCharacterUseSkill();
             msg.skillId = GetHashId();
-            msg.position = position;
             msg.direction = direction;
             msg.attackerNetId = attacker.netId;
             msg.addRotationX = addRotationX;
@@ -85,6 +87,9 @@ public class SkillData : ScriptableObject
             addRotationY += addingRotationY;
         }
 
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId());
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
+
+        if (statusEffectPrefab)
+            attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
     }
 }

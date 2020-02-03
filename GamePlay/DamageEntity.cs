@@ -9,6 +9,8 @@ public class DamageEntity : MonoBehaviour
     public EffectEntity spawnEffectPrefab;
     public EffectEntity explodeEffectPrefab;
     public EffectEntity hitEffectPrefab;
+    [Tooltip("This status will be applied to character whom hitted by this damage entity")]
+    public StatusEffectEntity statusEffectPrefab;
     public AudioClip[] hitFx;
     public float radius;
     public float lifeTime;
@@ -20,12 +22,10 @@ public class DamageEntity : MonoBehaviour
     private NetworkInstanceId attackerNetId;
     private float addRotationX;
     private float addRotationY;
-    [HideInInspector]
-    public int weaponDamage;
-    [HideInInspector]
-    public byte hitEffectType;
-    [HideInInspector]
-    public int relateDataId;
+    public int weaponDamage { get; set; }
+    public byte hitEffectType { get; set; }
+    public int relateDataId { get; set; }
+    public byte actionId { get; set; }
 
     private CharacterEntity attacker;
     public CharacterEntity Attacker
@@ -171,7 +171,9 @@ public class DamageEntity : MonoBehaviour
             var gameplayManager = GameplayManager.Singleton;
             float damage = Attacker.TotalAttack;
             damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
-            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage), hitEffectType, relateDataId);
+            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage), hitEffectType, relateDataId, actionId);
+            if (statusEffectPrefab)
+                target.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
         }
     }
 
@@ -193,7 +195,20 @@ public class DamageEntity : MonoBehaviour
         WeaponData weaponData = null;
         if (GameInstance.Weapons.TryGetValue(msg.weaponId, out weaponData))
         {
-            return InstantiateNewEntity(weaponData.damagePrefab, msg.isLeftHandWeapon, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+
+            var damagePrefab = weaponData.damagePrefab;
+            if (weaponData.AttackAnimations.ContainsKey(msg.actionId) &&
+                weaponData.AttackAnimations[msg.actionId].damagePrefab != null)
+                damagePrefab = weaponData.AttackAnimations[msg.actionId].damagePrefab;
+            var damageEntity = InstantiateNewEntity(damagePrefab, weaponData.AttackAnimations[msg.actionId].isAnimationForLeftHandWeapon, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+            if (damageEntity)
+                return damageEntity;
+            else
+                Debug.LogWarning("Can't find weapon damage entity prefab: " + msg.weaponId);
+        }
+        else
+        {
+            Debug.LogWarning("Can't find weapon data: " + msg.weaponId);
         }
         return null;
     }
@@ -203,7 +218,15 @@ public class DamageEntity : MonoBehaviour
         SkillData skillData = null;
         if (GameInstance.Skills.TryGetValue(msg.skillId, out skillData))
         {
-            return InstantiateNewEntity(skillData.damagePrefab, false, msg.position, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+            var damagePrefab = skillData.damagePrefab;
+            if (damagePrefab)
+                return InstantiateNewEntity(damagePrefab, false, msg.direction, msg.attackerNetId, msg.addRotationX, msg.addRotationY);
+            else
+                Debug.LogWarning("Can't find skill damage entity prefab: " + msg.skillId);
+        }
+        else
+        {
+            Debug.LogWarning("Can't find skill data: " + msg.skillId);
         }
         return null;
     }
@@ -211,7 +234,6 @@ public class DamageEntity : MonoBehaviour
     public static DamageEntity InstantiateNewEntity(
         DamageEntity prefab,
         bool isLeftHandWeapon,
-        Vector3 position,
         Vector3 direction,
         NetworkInstanceId attackerNetId,
         float addRotationX,
@@ -229,12 +251,13 @@ public class DamageEntity : MonoBehaviour
         {
             Transform launchTransform;
             attacker.GetDamageLaunchTransform(isLeftHandWeapon, out launchTransform);
-            position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
+            Vector3 position = launchTransform.position + attacker.CacheTransform.forward * prefab.spawnForwardOffset;
+            var rotation = Quaternion.LookRotation(direction, Vector3.up);
+            rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
+            var result = Instantiate(prefab, position, rotation);
+            result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
+            return result;
         }
-        var rotation = Quaternion.LookRotation(direction, Vector3.up);
-        rotation = Quaternion.Euler(rotation.eulerAngles + new Vector3(addRotationX, addRotationY));
-        var result = Instantiate(prefab, position, rotation);
-        result.InitAttackData(isLeftHandWeapon, attackerNetId, addRotationX, addRotationY);
-        return result;
+        return null;
     }
 }

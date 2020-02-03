@@ -14,9 +14,9 @@ public class WeaponData : ItemData
     [Header("SFX")]
     public AudioClip[] attackFx;
     public int weaponAnimId;
-    public readonly Dictionary<int, AttackAnimation> AttackAnimations = new Dictionary<int, AttackAnimation>();
+    public readonly Dictionary<short, AttackAnimation> AttackAnimations = new Dictionary<short, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, int actionId)
+    public void Launch(CharacterEntity attacker, byte actionId)
     {
         if (attacker == null || !NetworkServer.active)
             return;
@@ -39,26 +39,28 @@ public class WeaponData : ItemData
 
         for (var i = 0; i < spread; ++i)
         {
-            Transform launchTransform;
-            attacker.GetDamageLaunchTransform(AttackAnimations[actionId].isAnimationForLeftHandWeapon, out launchTransform);
             // An transform's rotation, position will be set when set `Attacker`
             // So don't worry about them before damage entity going to spawn
             // Velocity also being set when set `Attacker` too.
-            var position = launchTransform.position;
             var direction = attacker.CacheTransform.forward;
 
             var damagePrefab = this.damagePrefab;
-            if (AttackAnimations[actionId].damagePrefab != null)
+            if (AttackAnimations.ContainsKey(actionId) &&
+                AttackAnimations[actionId].damagePrefab != null)
                 damagePrefab = AttackAnimations[actionId].damagePrefab;
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, AttackAnimations[actionId].isAnimationForLeftHandWeapon, position, direction, attacker.netId, addRotationX, addRotationY);
-            damageEntity.weaponDamage = Mathf.CeilToInt(damage);
-            damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_DAMAGE_HIT;
-            damageEntity.relateDataId = GetHashId();
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, AttackAnimations[actionId].isAnimationForLeftHandWeapon, direction, attacker.netId, addRotationX, addRotationY);
+            if (damageEntity)
+            {
+                damageEntity.weaponDamage = Mathf.CeilToInt(damage);
+                damageEntity.hitEffectType = CharacterEntity.RPC_EFFECT_DAMAGE_HIT;
+                damageEntity.relateDataId = GetHashId();
+                damageEntity.actionId = actionId;
+            }
 
             // Telling nearby clients that the character use weapon
             var msg = new OpMsgCharacterAttack();
             msg.weaponId = GetHashId();
-            msg.position = position;
+            msg.actionId = actionId;
             msg.direction = direction;
             msg.attackerNetId = attacker.netId;
             msg.addRotationX = addRotationX;
@@ -73,7 +75,7 @@ public class WeaponData : ItemData
             addRotationY += addingRotationY;
         }
 
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN, GetHashId());
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_DAMAGE_SPAWN, GetHashId(), actionId);
     }
 
     public void SetupAnimations()

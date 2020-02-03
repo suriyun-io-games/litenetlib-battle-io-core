@@ -14,7 +14,6 @@ public class OpMsgCharacterUseSkill : BaseOpMsg
     }
 
     public int skillId;
-    public Vector3 position;
     public Vector3 direction;
     public NetworkInstanceId attackerNetId;
     public float addRotationX;
