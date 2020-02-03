@@ -25,6 +25,7 @@ public class MonsterEntity : CharacterEntity
     public float detectEnemyDistance = 2f;
     public float followEnemyDistance = 5f;
     public float turnSpeed = 5f;
+    public int[] navMeshAreas = new int[] { 0, 1, 2 };
     public Characteristic characteristic;
     public string monsterName;
     public int monsterLevel;
@@ -53,7 +54,16 @@ public class MonsterEntity : CharacterEntity
 
     public override CharacterStats SumAddStats
     {
-        get { return monsterStats; }
+        get
+        {
+            var stats = monsterStats;
+            if (appliedStatusEffects != null)
+            {
+                foreach (var value in appliedStatusEffects.Values)
+                    stats += value.addStats;
+            }
+            return stats;
+        }
     }
 
     public override int TotalHp
@@ -106,6 +116,7 @@ public class MonsterEntity : CharacterEntity
         // Override base function to changes functionality, to set character model / weapon data here
         characterModel = monsterCharacterModel;
         weaponData = monsterWeaponData;
+        UpdateSkills();
     }
 
     public override void OnStartServer()
@@ -119,6 +130,7 @@ public class MonsterEntity : CharacterEntity
         lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
         ServerSpawn(false);
+        UpdateSkills();
     }
 
     public override void OnStartLocalPlayer()
@@ -253,10 +265,22 @@ public class MonsterEntity : CharacterEntity
 
     private void GetMovePaths(Vector3 position)
     {
+        int areaMask = 0;
+        if (navMeshAreas.Length == 0)
+        {
+            areaMask = NavMesh.AllAreas;
+        }
+        else
+        {
+            for (int i = 0; i < navMeshAreas.Length; ++i)
+            {
+                areaMask = areaMask | 1 << navMeshAreas[i];
+            }
+        }
         NavMeshPath navPath = new NavMeshPath();
         NavMeshHit navHit;
-        if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
-            NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
+        if (NavMesh.SamplePosition(position, out navHit, 5f, areaMask) &&
+            NavMesh.CalculatePath(CacheTransform.position, navHit.position, areaMask, navPath))
         {
             navPaths = new Queue<Vector3>(navPath.corners);
             // Dequeue first path it's not require for future movement
@@ -331,9 +355,9 @@ public class MonsterEntity : CharacterEntity
         }
     }
 
-    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
+    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)
     {
-        if (base.ReceiveDamage(attacker, damage, type, dataId))
+        if (base.ReceiveDamage(attacker, damage, type, dataId, actionId))
         {
             switch (characteristic)
             {
@@ -355,6 +379,7 @@ public class MonsterEntity : CharacterEntity
         base.OnSpawn();
         weaponData = monsterWeaponData;
         level = monsterLevel;
+        UpdateSkills();
     }
 
     public override bool CanRespawn(params object[] extraParams)

@@ -22,6 +22,7 @@ public class BotEntity : CharacterEntity
     public float randomMoveDistance = 5f;
     public float detectEnemyDistance = 2f;
     public float turnSpeed = 5f;
+    public int[] navMeshAreas = new int[] { 0, 1, 2 };
     public Characteristic characteristic;
     public CharacterStats startAddStats;
     [HideInInspector, System.NonSerialized]
@@ -178,10 +179,22 @@ public class BotEntity : CharacterEntity
 
     private void GetMovePaths(Vector3 position)
     {
+        int areaMask = 0;
+        if (navMeshAreas.Length == 0)
+        {
+            areaMask = NavMesh.AllAreas;
+        }
+        else
+        {
+            for (int i = 0; i < navMeshAreas.Length; ++i)
+            {
+                areaMask = areaMask | 1 << navMeshAreas[i];
+            }
+        }
         NavMeshPath navPath = new NavMeshPath();
         NavMeshHit navHit;
-        if (NavMesh.SamplePosition(position, out navHit, 5f, NavMesh.AllAreas) &&
-            NavMesh.CalculatePath(CacheTransform.position, navHit.position, NavMesh.AllAreas, navPath))
+        if (NavMesh.SamplePosition(position, out navHit, 5f, areaMask) &&
+            NavMesh.CalculatePath(CacheTransform.position, navHit.position, areaMask, navPath))
         {
             navPaths = new Queue<Vector3>(navPath.corners);
             // Dequeue first path it's not require for future movement
@@ -264,9 +277,9 @@ public class BotEntity : CharacterEntity
         }
     }
 
-    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId)
+    public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)
     {
-        if (base.ReceiveDamage(attacker, damage, type, dataId))
+        if (base.ReceiveDamage(attacker, damage, type, dataId, actionId))
         {
             switch (characteristic)
             {
