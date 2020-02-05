@@ -38,6 +38,14 @@ public class SkillData : ScriptableObject
         if (attacker == null || !NetworkServer.active)
             return;
 
+        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
+
+        if (statusEffectPrefab)
+            attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
+
+        if (!damagePrefab)
+            return;
+
         var characterColliders = Physics.OverlapSphere(attacker.CacheTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
         var gameplayManager = GameplayManager.Singleton;
         var spread = 1 + spreadDamages;
@@ -86,10 +94,5 @@ public class SkillData : ScriptableObject
             }
             addRotationY += addingRotationY;
         }
-
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
-
-        if (statusEffectPrefab)
-            attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
     }
 }

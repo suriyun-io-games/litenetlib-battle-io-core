@@ -1,18 +1,19 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class StatusEffectEntity : MonoBehaviour
 {
-    public string GetId()
-    {
-        return name;
-    }
-
     public int GetHashId()
     {
-        return GetId().MakeHashId();
+        return hashId;
     }
+
+    [SerializeField]
+    private int hashId;
 
     [Range(0f, 1f)]
     public float applyRate = 1f;
@@ -30,7 +31,20 @@ public class StatusEffectEntity : MonoBehaviour
     private void OnDestroy()
     {
         if (characterEntity)
+        {
             characterEntity.RemoveAppliedStatusEffect(GetHashId());
+        }
+    }
+
+    private void OnValidate()
+    {
+#if UNITY_EDITOR
+        if (hashId != name.MakeHashId())
+        {
+            hashId = name.MakeHashId();
+            EditorUtility.SetDirty(this);
+        }
+#endif
     }
 
     public void Recovery()
