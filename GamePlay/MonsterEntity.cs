@@ -14,7 +14,8 @@ public class MonsterEntity : CharacterEntity
         NoneAggressive,
     }
     public const float ReachedTargetDistance = 0.1f;
-    [Header("Monster config set here")]
+    [Header("Monster configs")]
+    public float minimumAttackRange = 5f;
     public float wanderDistanceAroundSpawnPosition = 1f;
     [FormerlySerializedAs("updateWanderDuration")]
     public float updateMovementDuration = 2f;
@@ -380,6 +381,14 @@ public class MonsterEntity : CharacterEntity
         weaponData = monsterWeaponData;
         level = monsterLevel;
         UpdateSkills();
+    }
+
+    public override float GetAttackRange()
+    {
+        float range = base.GetAttackRange();
+        if (range < minimumAttackRange)
+            return minimumAttackRange;
+        return range;
     }
 
     public override bool CanRespawn(params object[] extraParams)

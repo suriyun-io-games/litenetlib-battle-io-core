@@ -857,7 +857,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         Hp += amount;
     }
 
-    public float GetAttackRange()
+    public virtual float GetAttackRange()
     {
         if (weaponData == null || weaponData.damagePrefab == null)
             return 0;
