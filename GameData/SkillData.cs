@@ -40,17 +40,16 @@ public class SkillData : ScriptableObject
 
         attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
 
-        if (statusEffectPrefab)
+        if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(attacker, null))
             attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
 
         if (!damagePrefab)
             return;
 
         var characterColliders = Physics.OverlapSphere(attacker.CacheTransform.position, damagePrefab.GetAttackRange() + 5f, 1 << GameInstance.Singleton.characterLayer);
-        var gameplayManager = GameplayManager.Singleton;
         var spread = 1 + spreadDamages;
         var damage = (float)attacker.TotalAttack + increaseDamage + (attacker.TotalAttack * increaseDamageByRate);
-        damage += Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage;
+        damage += Random.Range(GameplayManager.Singleton.minAttackVaryRate, GameplayManager.Singleton.maxAttackVaryRate) * damage;
 
         var addRotationX = 0f;
         var addRotationY = 0f;

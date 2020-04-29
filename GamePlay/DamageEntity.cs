@@ -169,11 +169,8 @@ public class DamageEntity : MonoBehaviour
         // Damage receiving calculation on server only
         if (NetworkServer.active)
         {
-            var gameplayManager = GameplayManager.Singleton;
-            float damage = Attacker.TotalAttack;
-            damage += (Random.Range(gameplayManager.minAttackVaryRate, gameplayManager.maxAttackVaryRate) * damage);
-            target.ReceiveDamage(Attacker, Mathf.CeilToInt(damage), hitEffectType, relateDataId, actionId);
-            if (statusEffectPrefab)
+            target.ReceiveDamage(Attacker, weaponDamage, hitEffectType, relateDataId, actionId);
+            if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(target, Attacker))
                 target.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
         }
     }

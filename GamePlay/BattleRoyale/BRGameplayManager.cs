@@ -117,6 +117,13 @@ public class BRGameplayManager : GameplayManager
         return false;
     }
 
+    public override bool CanApplyStatusEffect(CharacterEntity effectReceiver, CharacterEntity effectApplier)
+    {
+        if (base.CanApplyStatusEffect(effectReceiver, effectApplier))
+            return effectReceiver.GetComponent<BRCharacterEntityExtra>().isSpawned;
+        return false;
+    }
+
     public override bool CanAttack(CharacterEntity character)
     {
         var networkGameplayManager = BaseNetworkGameManager.Singleton;

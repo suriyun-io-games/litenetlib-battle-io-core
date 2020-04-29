@@ -30,10 +30,8 @@ public class StatusEffectEntity : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (characterEntity)
-        {
+        if (characterEntity && GameplayManager.Singleton.CanReceiveDamage(characterEntity, null))
             characterEntity.RemoveAppliedStatusEffect(GetHashId());
-        }
     }
 
     private void OnValidate()

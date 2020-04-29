@@ -138,6 +138,17 @@ public class GameplayManager : NetworkBehaviour
         return true;
     }
 
+    public virtual bool CanApplyStatusEffect(CharacterEntity effectReceiver, CharacterEntity effectApplier)
+    {
+        var networkGameplayManager = BaseNetworkGameManager.Singleton;
+        if (networkGameplayManager != null)
+        {
+            if (networkGameplayManager.IsMatchEnded)
+                return false;
+        }
+        return true;
+    }
+
     public virtual bool CanAttack(CharacterEntity character)
     {
         var networkGameplayManager = BaseNetworkGameManager.Singleton;
