@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 [System.Serializable]
 public struct BRCircle
@@ -51,33 +51,33 @@ public class BRGameplayManager : GameplayManager
     private GameObject airplane;
 
     [Header("Sync Vars")]
-    [SyncVar]
+    [SyncField]
     public int currentCircle;
-    [SyncVar]
+    [SyncField]
     public float currentRadius;
-    [SyncVar]
+    [SyncField]
     public Vector3 currentCenterPosition;
-    [SyncVar]
+    [SyncField]
     public float nextRadius;
-    [SyncVar]
+    [SyncField]
     public Vector3 nextCenterPosition;
-    [SyncVar]
+    [SyncField]
     public BRState currentState;
-    [SyncVar]
+    [SyncField]
     public float currentDuration;
-    [SyncVar(hook = "OnCurrentCountdownChanged")]
+    [SyncField(hook = "OnCurrentCountdownChanged")]
     public float currentCountdown;
-    [SyncVar]
+    [SyncField]
     public Vector3 spawnerMoveFrom;
-    [SyncVar]
+    [SyncField]
     public Vector3 spawnerMoveTo;
-    [SyncVar]
+    [SyncField]
     public float spawnerMoveDuration;
-    [SyncVar(hook = "OnSpawnerMoveCountdownChanged")]
+    [SyncField(hook = "OnSpawnerMoveCountdownChanged")]
     public float spawnerMoveCountdown;
-    [SyncVar]
+    [SyncField]
     public int countAliveCharacters;
-    [SyncVar]
+    [SyncField]
     public int countAllCharacters;
 
     public float CurrentCircleHpRateDps { get; private set; }
@@ -173,7 +173,7 @@ public class BRGameplayManager : GameplayManager
 
     private void UpdateGameState()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
         currentCountdown -= Time.deltaTime;
@@ -282,7 +282,7 @@ public class BRGameplayManager : GameplayManager
     {
         if (currentState == BRState.Shrinking)
         {
-            var countdown = isServer ? currentCountdown : CurrentCountdown;
+            var countdown = IsServer ? currentCountdown : CurrentCountdown;
             var interp = (currentShrinkDuration - countdown) / currentShrinkDuration;
             currentRadius = Mathf.Lerp(startShrinkRadius, nextRadius, interp);
             currentCenterPosition = Vector3.Lerp(startShrinkCenterPosition, nextCenterPosition, interp);
@@ -291,7 +291,7 @@ public class BRGameplayManager : GameplayManager
 
     private void UpdateSpawner()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
         
         if (currentState != BRState.WaitingForPlayers)
@@ -332,7 +332,7 @@ public class BRGameplayManager : GameplayManager
 
     public Vector3 GetSpawnerPosition()
     {
-        var countdown = isServer ? spawnerMoveCountdown : SpawnerMoveCountdown;
+        var countdown = IsServer ? spawnerMoveCountdown : SpawnerMoveCountdown;
         var interp = (spawnerMoveDuration - countdown) / spawnerMoveDuration;
         return Vector3.Lerp(spawnerMoveFrom, spawnerMoveTo, interp);
     }
@@ -347,7 +347,7 @@ public class BRGameplayManager : GameplayManager
     public bool CanSpawnCharacter(CharacterEntity character)
     {
         var extra = character.GetComponent<BRCharacterEntityExtra>();
-        return isServer && (extra == null || !extra.isSpawned) && IsSpawnerInsideSpawnableArea();
+        return IsServer && (extra == null || !extra.isSpawned) && IsSpawnerInsideSpawnableArea();
     }
 
     public bool IsSpawnerInsideSpawnableArea()

@@ -52,17 +52,17 @@ public class BotEntity : CharacterEntity
         randomDashDuration = dashDuration + Random.Range(randomDashDurationMin, randomDashDurationMax);
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnStartOwnerClient()
     {
         // Do nothing
     }
 
     protected override void UpdateMovements()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
-        if (GameNetworkManager.Singleton.numPlayers <= 0)
+        if (GameNetworkManager.Singleton.PlayersCount <= 0)
         {
             attackingActionId = -1;
             CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);

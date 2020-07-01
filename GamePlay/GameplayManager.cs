@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
-public class GameplayManager : NetworkBehaviour
+public class GameplayManager : LiteNetLibBehaviour
 {
     [System.Serializable]
     public struct RewardCurrency
@@ -52,8 +52,8 @@ public class GameplayManager : NetworkBehaviour
         foreach (var powerUp in powerUps)
         {
             var powerUpPrefab = powerUp.powerUpPrefab;
-            if (powerUpPrefab != null && !ClientScene.prefabs.ContainsValue(powerUpPrefab.gameObject))
-                ClientScene.RegisterPrefab(powerUpPrefab.gameObject);
+            if (powerUpPrefab != null)
+                GameNetworkManager.Singleton.Assets.RegisterPrefab(powerUpPrefab.Identity);
             if (powerUpPrefab != null && !powerUpEntities.ContainsKey(powerUpPrefab.name))
                 powerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
         }
@@ -77,13 +77,19 @@ public class GameplayManager : NetworkBehaviour
 
     public void SpawnPowerUp(string prefabName)
     {
-        if (!isServer || string.IsNullOrEmpty(prefabName))
+        SpawnPowerUp(prefabName, GetPowerUpSpawnPosition());
+    }
+
+    public void SpawnPowerUp(string prefabName, Vector3 position)
+    {
+        if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
-        PowerUpEntity powerUpPrefab = null;
-        if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab)) {
-            var powerUpEntity = Instantiate(powerUpPrefab, GetPowerUpSpawnPosition(), Quaternion.identity);
+        PowerUpEntity powerUpPrefab;
+        if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab))
+        {
+            var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;
-            NetworkServer.Spawn(powerUpEntity.gameObject);
+            Manager.Assets.NetworkSpawn(powerUpEntity.gameObject);
         }
     }
 

@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
+using LiteNetLib;
 
 public class SkillData : ScriptableObject
 {
@@ -35,10 +36,10 @@ public class SkillData : ScriptableObject
 
     public void Launch(CharacterEntity attacker)
     {
-        if (attacker == null || !NetworkServer.active)
+        if (attacker == null || !GameNetworkManager.Singleton.IsServer)
             return;
 
-        attacker.RpcEffect(attacker.netId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
+        attacker.RpcEffect(attacker.ObjectId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
 
         if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(attacker, null))
             attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
@@ -68,7 +69,7 @@ public class SkillData : ScriptableObject
             // Velocity also being set when set `Attacker` too.
             var direction = attacker.CacheTransform.forward;
 
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, direction, attacker.netId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, direction, attacker.ObjectId, addRotationX, addRotationY);
             if (damageEntity)
             {
                 damageEntity.weaponDamage = Mathf.CeilToInt(damage);
@@ -81,7 +82,7 @@ public class SkillData : ScriptableObject
             var msg = new OpMsgCharacterUseSkill();
             msg.skillId = GetHashId();
             msg.direction = direction;
-            msg.attackerNetId = attacker.netId;
+            msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
 
@@ -89,7 +90,7 @@ public class SkillData : ScriptableObject
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity) && !(character is MonsterEntity))
-                    NetworkServer.SendToClient(character.connectionToClient.connectionId, msg.OpId, msg);
+                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
             }
             addRotationY += addingRotationY;
         }

@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
@@ -81,29 +81,27 @@ public class IONetworkGameRule : BaseNetworkGameRule
         return true;
     }
 
-    public override void OnStartServer(BaseNetworkGameManager manager)
+    public override void InitialClientObjects(LiteNetLibClient client)
     {
-        base.OnStartServer(manager);
-
-        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
-
-        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
-    }
-
-    public override void InitialClientObjects(NetworkClient client)
-    {
-        if (overrideCharacterPrefab != null && !ClientScene.prefabs.ContainsValue(overrideCharacterPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideCharacterPrefab.gameObject);
-
-        if (overrideBotPrefab != null && !ClientScene.prefabs.ContainsValue(overrideBotPrefab.gameObject))
-            ClientScene.RegisterPrefab(overrideBotPrefab.gameObject);
-
         var ui = FindObjectOfType<UIGameplay>();
         if (ui == null && uiGameplayPrefab != null)
             ui = Instantiate(uiGameplayPrefab);
         if (ui != null)
             ui.gameObject.SetActive(true);
+    }
+
+    public override void RegisterPrefabs()
+    {
+        if (GameInstance.Singleton.characterPrefab != null)
+            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.characterPrefab.Identity);
+
+        if (GameInstance.Singleton.botPrefab != null)
+            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.botPrefab.Identity);
+
+        if (overrideCharacterPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
+
+        if (overrideBotPrefab != null)
+            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
     }
 }

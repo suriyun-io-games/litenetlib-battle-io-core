@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 
 [RequireComponent(typeof(Rigidbody))]
 public class DamageEntity : MonoBehaviour
@@ -19,7 +19,7 @@ public class DamageEntity : MonoBehaviour
     public bool relateToAttacker;
     private bool isDead;
     private bool isLeftHandWeapon;
-    private NetworkInstanceId attackerNetId;
+    private uint attackerNetId;
     private float addRotationX;
     private float addRotationY;
     private float? colliderExtents;
@@ -35,8 +35,8 @@ public class DamageEntity : MonoBehaviour
         {
             if (attacker == null)
             {
-                var go = NetworkServer.active ? NetworkServer.FindLocalObject(attackerNetId) : ClientScene.FindLocalObject(attackerNetId);
-                if (go != null)
+                LiteNetLibIdentity go;
+                if (GameNetworkManager.Singleton.Assets.TryGetSpawnedObject(attackerNetId, out go))
                     attacker = go.GetComponent<CharacterEntity>();
             }
             return attacker;
@@ -63,7 +63,7 @@ public class DamageEntity : MonoBehaviour
     /// <summary>
     /// Init Attacker, this function must be call at server to init attacker
     /// </summary>
-    public void InitAttackData(bool isLeftHandWeapon, NetworkInstanceId attackerNetId, float addRotationX, float addRotationY)
+    public void InitAttackData(bool isLeftHandWeapon, uint attackerNetId, float addRotationX, float addRotationY)
     {
         this.isLeftHandWeapon = isLeftHandWeapon;
         this.attackerNetId = attackerNetId;
@@ -128,7 +128,7 @@ public class DamageEntity : MonoBehaviour
 
         var otherCharacter = other.GetComponent<CharacterEntity>();
         // Damage will not hit attacker, so avoid it
-        if (otherCharacter != null && otherCharacter.netId.Value == attackerNetId.Value)
+        if (otherCharacter != null && otherCharacter.ObjectId == attackerNetId)
             return;
 
         var hitSomeAliveCharacter = false;
@@ -143,7 +143,7 @@ public class DamageEntity : MonoBehaviour
         {
             var target = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (target == null || target == otherCharacter || target.netId.Value == attackerNetId.Value || target.Hp <= 0)
+            if (target == null || target == otherCharacter || target.ObjectId == attackerNetId || target.Hp <= 0)
                 continue;
 
             hitSomeAliveCharacter = true;
@@ -167,7 +167,7 @@ public class DamageEntity : MonoBehaviour
     private void ApplyDamage(CharacterEntity target)
     {
         // Damage receiving calculation on server only
-        if (NetworkServer.active)
+        if (GameNetworkManager.Singleton.IsServer)
         {
             target.ReceiveDamage(Attacker, weaponDamage, hitEffectType, relateDataId, actionId);
             if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(target, Attacker))
@@ -199,7 +199,7 @@ public class DamageEntity : MonoBehaviour
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterAttack msg)
     {
-        WeaponData weaponData = null;
+        WeaponData weaponData;
         if (GameInstance.Weapons.TryGetValue(msg.weaponId, out weaponData))
         {
 
@@ -222,7 +222,7 @@ public class DamageEntity : MonoBehaviour
 
     public static DamageEntity InstantiateNewEntity(OpMsgCharacterUseSkill msg)
     {
-        SkillData skillData = null;
+        SkillData skillData;
         if (GameInstance.Skills.TryGetValue(msg.skillId, out skillData))
         {
             var damagePrefab = skillData.damagePrefab;
@@ -242,7 +242,7 @@ public class DamageEntity : MonoBehaviour
         DamageEntity prefab,
         bool isLeftHandWeapon,
         Vector3 direction,
-        NetworkInstanceId attackerNetId,
+        uint attackerNetId,
         float addRotationX,
         float addRotationY)
     {
@@ -250,8 +250,8 @@ public class DamageEntity : MonoBehaviour
             return null;
 
         CharacterEntity attacker = null;
-        var go = NetworkServer.active ? NetworkServer.FindLocalObject(attackerNetId) : ClientScene.FindLocalObject(attackerNetId);
-        if (go != null)
+        LiteNetLibIdentity go;
+        if (GameNetworkManager.Singleton.Assets.TryGetSpawnedObject(attackerNetId, out go))
             attacker = go.GetComponent<CharacterEntity>();
 
         if (attacker != null)

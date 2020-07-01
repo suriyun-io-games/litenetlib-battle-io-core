@@ -134,7 +134,7 @@ public class MonsterEntity : CharacterEntity
         UpdateSkills();
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnStartOwnerClient()
     {
         // Override base function to changes functionality, to do nothing
     }
@@ -156,10 +156,10 @@ public class MonsterEntity : CharacterEntity
 
     protected override void UpdateMovements()
     {
-        if (!isServer)
+        if (!IsServer)
             return;
 
-        if (GameNetworkManager.Singleton.numPlayers <= 0)
+        if (GameNetworkManager.Singleton.PlayersCount <= 0)
         {
             attackingActionId = -1;
             return;

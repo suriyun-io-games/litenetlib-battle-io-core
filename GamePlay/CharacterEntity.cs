@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
+using LiteNetLibManager;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using static LiteNetLibManager.LiteNetLibSyncList;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CharacterEntity : BaseNetworkGameCharacter
@@ -32,14 +33,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [Header("Effect")]
     public GameObject invincibleEffect;
     [Header("Online data")]
-    [SyncVar]
+    [SyncField]
     public int hp;
     public int Hp
     {
         get { return hp; }
         set
         {
-            if (!isServer)
+            if (!IsServer)
                 return;
 
             if (value <= 0)
@@ -47,8 +48,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 value = 0;
                 if (!isDead)
                 {
-                    if (connectionToClient != null)
-                        TargetDead(connectionToClient);
+                    TargetDead(ConnectionId);
                     deathTime = Time.unscaledTime;
                     ++dieCount;
                     isDead = true;
@@ -60,14 +60,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [SyncVar]
+    [SyncField]
     public int exp;
     public virtual int Exp
     {
         get { return exp; }
         set
         {
-            if (!isServer)
+            if (!IsServer)
                 return;
 
             var gameplayManager = GameplayManager.Singleton;
@@ -88,39 +88,39 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [SyncVar]
+    [SyncField]
     public int level = 1;
 
-    [SyncVar]
+    [SyncField]
     public int statPoint;
 
-    [SyncVar]
+    [SyncField]
     public int watchAdsCount;
 
-    [SyncVar(hook = "OnCharacterChanged")]
+    [SyncField(hook = "OnCharacterChanged")]
     public int selectCharacter = 0;
 
-    [SyncVar(hook = "OnHeadChanged")]
+    [SyncField(hook = "OnHeadChanged")]
     public int selectHead = 0;
 
-    [SyncVar(hook = "OnWeaponChanged")]
+    [SyncField(hook = "OnWeaponChanged")]
     public int selectWeapon = 0;
 
     public SyncListInt selectCustomEquipments = new SyncListInt();
 
-    [SyncVar]
+    [SyncField]
     public bool isInvincible;
 
-    [SyncVar, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
+    [SyncField, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
     public short attackingActionId = -1;
 
-    [SyncVar, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
+    [SyncField, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
     public sbyte usingSkillHotkeyId = -1;
 
-    [SyncVar]
+    [SyncField]
     public CharacterStats addStats;
 
-    [SyncVar]
+    [SyncField]
     public string extra;
 
     [HideInInspector]
@@ -182,7 +182,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 canvas.enabled = !isHidding;
         }
     }
-    
+
     public Transform CacheTransform { get; private set; }
     public Rigidbody CacheRigidbody { get; private set; }
     public Collider CacheCollider { get; private set; }
@@ -311,7 +311,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     private void Awake()
     {
-        selectCustomEquipments.Callback = OnCustomEquipmentsChanged;
+        selectCustomEquipments.onOperation = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         CacheTransform = transform;
         CacheRigidbody = GetComponent<Rigidbody>();
@@ -331,12 +331,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public override void OnStartClient()
     {
-        if (!isServer)
+        if (!IsServer)
         {
             OnHeadChanged(selectHead);
             OnCharacterChanged(selectCharacter);
             OnWeaponChanged(selectWeapon);
-            OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
+            OnCustomEquipmentsChanged(Operation.Dirty, 0);
         }
     }
 
@@ -345,14 +345,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
         OnHeadChanged(selectHead);
         OnCharacterChanged(selectCharacter);
         OnWeaponChanged(selectWeapon);
-        OnCustomEquipmentsChanged(SyncList<int>.Operation.OP_DIRTY, 0);
+        OnCustomEquipmentsChanged(Operation.Dirty, 0);
         attackingActionId = -1;
         usingSkillHotkeyId = -1;
     }
 
-    public override void OnStartLocalPlayer()
+    public override void OnStartOwnerClient()
     {
-        base.OnStartLocalPlayer();
+        base.OnStartOwnerClient();
 
         var followCam = FindObjectOfType<FollowCamera>();
         followCam.target = CacheTransform;
@@ -374,20 +374,20 @@ public class CharacterEntity : BaseNetworkGameCharacter
         base.Update();
         if (NetworkManager != null && NetworkManager.IsMatchEnded)
             return;
-        
+
         if (Hp <= 0)
         {
-            if (!isServer && isLocalPlayer && Time.unscaledTime - deathTime >= DISCONNECT_WHEN_NOT_RESPAWN_DURATION)
+            if (!IsServer && IsOwnerClient && Time.unscaledTime - deathTime >= DISCONNECT_WHEN_NOT_RESPAWN_DURATION)
                 GameNetworkManager.Singleton.StopHost();
 
-            if (isServer)
+            if (IsServer)
             {
                 attackingActionId = -1;
                 usingSkillHotkeyId = -1;
             }
         }
 
-        if (isServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
+        if (IsServer && isInvincible && Time.unscaledTime - invincibleTime >= GameplayManager.Singleton.invincibleDuration)
             isInvincible = false;
         if (invincibleEffect != null)
             invincibleEffect.SetActive(isInvincible);
@@ -421,7 +421,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateInput()
     {
-        if (!isLocalPlayer || Hp <= 0)
+        if (!IsOwnerClient || Hp <= 0)
             return;
 
         bool canControl = true;
@@ -604,12 +604,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateMovements()
     {
-        if (!isLocalPlayer || Hp <= 0)
+        if (!IsOwnerClient || Hp <= 0)
             return;
 
         var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
         var dashDirection = new Vector3(dashInputMove.x, 0, dashInputMove.y);
-        
+
         Move(isDashing ? dashDirection : moveDirection);
         // Turn character to move direction
         if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0)
@@ -675,22 +675,22 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void Attack()
     {
-        if (attackingActionId < 0 && isLocalPlayer)
+        if (attackingActionId < 0 && IsOwnerClient)
             CmdAttack();
     }
 
     public void StopAttack()
     {
-        if (attackingActionId >= 0 && isLocalPlayer)
+        if (attackingActionId >= 0 && IsOwnerClient)
             CmdStopAttack();
     }
 
     public void UseSkill(sbyte hotkeyId)
     {
         SkillData skill;
-        if (attackingActionId < 0 && 
-            usingSkillHotkeyId < 0 && 
-            isLocalPlayer && skills.TryGetValue(hotkeyId, out skill) &&
+        if (attackingActionId < 0 &&
+            usingSkillHotkeyId < 0 &&
+            IsOwnerClient && skills.TryGetValue(hotkeyId, out skill) &&
             GetSkillCoolDownCount(hotkeyId) > skill.coolDown)
         {
             lastSkillUseTimes[hotkeyId] = Time.unscaledTime;
@@ -705,7 +705,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     IEnumerator AttackRoutine()
     {
-        if (!isPlayingAttackAnim && 
+        if (!isPlayingAttackAnim &&
             Hp > 0 &&
             characterModel != null &&
             characterModel.TempAnimator != null)
@@ -719,11 +719,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 yield return StartCoroutine(PlayAttackAnimationRoutine(attackAnimation, weaponData.attackFx, () =>
                 {
                     // Launch damage entity on server only
-                    if (isServer)
+                    if (IsServer)
                         weaponData.Launch(this, actionId);
                 }));
                 // If player still attacking, random new attacking action id
-                if (isServer && attackingActionId >= 0 && weaponData != null)
+                if (IsServer && attackingActionId >= 0 && weaponData != null)
                     attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
             }
             isPlayingAttackAnim = false;
@@ -744,7 +744,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 yield return StartCoroutine(PlayAttackAnimationRoutine(skillData.attackAnimation, skillData.attackFx, () =>
                 {
                     // Launch damage entity on server only
-                    if (isServer)
+                    if (IsServer)
                         skillData.Launch(this);
                 }));
             }
@@ -786,9 +786,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Server]
     public virtual bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)
     {
+        if (!IsServer)
+            return false;
+
         if (Hp <= 0 || isInvincible)
             return false;
 
@@ -796,7 +798,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!gameplayManager.CanReceiveDamage(this, attacker))
             return false;
 
-        RpcEffect(attacker.netId, type, dataId, actionId);
+        RpcEffect(attacker.ObjectId, type, dataId, actionId);
         int reduceHp = damage - TotalDefend;
         if (reduceHp < 0)
             reduceHp = 0;
@@ -827,30 +829,31 @@ public class CharacterEntity : BaseNetworkGameCharacter
         return true;
     }
 
-    [Server]
     public void KilledTarget(CharacterEntity target)
     {
+        if (!IsServer)
+            return;
+
         var gameplayManager = GameplayManager.Singleton;
         var targetLevel = target.level;
         var maxLevel = gameplayManager.maxLevel;
         Exp += Mathf.CeilToInt(target.RewardExp * TotalExpRate);
         score += Mathf.CeilToInt(target.KillScore * TotalScoreRate);
-        if (connectionToClient != null)
+        foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
         {
-            foreach (var rewardCurrency in gameplayManager.rewardCurrencies)
-            {
-                var currencyId = rewardCurrency.currencyId;
-                var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
-                TargetRewardCurrency(connectionToClient, currencyId, amount);
-            }
+            var currencyId = rewardCurrency.currencyId;
+            var amount = rewardCurrency.amount.Calculate(targetLevel, maxLevel);
+            TargetRewardCurrency(ConnectionId, currencyId, amount);
         }
         ++killCount;
         GameNetworkManager.Singleton.SendKillNotify(playerName, target.playerName, weaponData == null ? string.Empty : weaponData.GetId());
     }
 
-    [Server]
     public void Heal(int amount)
     {
+        if (!IsServer)
+            return;
+
         if (Hp <= 0)
             return;
 
@@ -942,7 +945,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected virtual void OnWeaponChanged(int value)
     {
         selectWeapon = value;
-        if (isServer)
+        if (IsServer)
         {
             if (defaultSelectWeapon == 0)
                 defaultSelectWeapon = value;
@@ -954,7 +957,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         UpdateSkills();
     }
 
-    protected virtual void OnCustomEquipmentsChanged(SyncList<int>.Operation op, int itemIndex)
+    protected virtual void OnCustomEquipmentsChanged(Operation op, int itemIndex)
     {
         if (characterModel != null)
             characterModel.ClearCustomModels();
@@ -997,39 +1000,41 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public virtual void OnSpawn() { }
 
-    [Server]
     public void ServerInvincible()
     {
+        if (!IsServer)
+            return;
         invincibleTime = Time.unscaledTime;
         isInvincible = true;
     }
 
-    [Server]
     public void ServerSpawn(bool isWatchedAds)
     {
+        if (!IsServer)
+            return;
         if (Respawn(isWatchedAds))
         {
-            var gameplayManager = GameplayManager.Singleton;
             ServerInvincible();
             OnSpawn();
             var position = GetSpawnPosition();
             CacheTransform.position = position;
-            if (connectionToClient != null)
-                TargetSpawn(connectionToClient, position);
+            TargetSpawn(ConnectionId, position);
             ServerRevive();
         }
     }
 
-    [Server]
     public void ServerRespawn(bool isWatchedAds)
     {
+        if (!IsServer)
+            return;
         if (CanRespawn(isWatchedAds))
             ServerSpawn(isWatchedAds);
     }
 
-    [Server]
     public void ServerRevive()
     {
+        if (!IsServer)
+            return;
         if (defaultSelectWeapon != 0)
             selectWeapon = defaultSelectWeapon;
         isPlayingAttackAnim = false;
@@ -1039,8 +1044,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
         releasedUseSkillHotkeyId = -1;
     }
 
-    [Command]
     public void CmdReady()
+    {
+        CallNetFunction(_CmdReady, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void _CmdReady()
     {
         if (!isReady)
         {
@@ -1049,14 +1059,24 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Command]
     public void CmdRespawn(bool isWatchedAds)
+    {
+        CallNetFunction(_CmdRespawn, FunctionReceivers.Server, isWatchedAds);
+    }
+
+    [NetFunction]
+    protected void _CmdRespawn(bool isWatchedAds)
     {
         ServerRespawn(isWatchedAds);
     }
 
-    [Command]
     public void CmdAttack()
+    {
+        CallNetFunction(_CmdAttack, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void _CmdAttack()
     {
         if (weaponData != null)
             attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
@@ -1064,21 +1084,36 @@ public class CharacterEntity : BaseNetworkGameCharacter
             attackingActionId = -1;
     }
 
-    [Command]
     public void CmdStopAttack()
+    {
+        CallNetFunction(_CmdStopAttack, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void _CmdStopAttack()
     {
         attackingActionId = -1;
     }
 
-    [Command]
     public void CmdUseSkill(sbyte hotkeyId)
+    {
+        CallNetFunction(_CmdUseSkill, FunctionReceivers.Server, hotkeyId);
+    }
+
+    [NetFunction]
+    protected void _CmdUseSkill(sbyte hotkeyId)
     {
         if (skills.ContainsKey(hotkeyId))
             usingSkillHotkeyId = hotkeyId;
     }
 
-    [Command]
     public void CmdAddAttribute(string name)
+    {
+        CallNetFunction(_CmdAddAttribute, FunctionReceivers.Server, name);
+    }
+
+    [NetFunction]
+    protected void _CmdAddAttribute(string name)
     {
         if (statPoint > 0)
         {
@@ -1095,15 +1130,25 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [Command]
     public void CmdDash()
+    {
+        CallNetFunction(_CmdDash, FunctionReceivers.Server);
+    }
+
+    [NetFunction]
+    protected void _CmdDash()
     {
         // Play dash animation on other clients
         RpcDash();
     }
 
-    [ClientRpc]
     public void RpcApplyStatusEffect(int dataId)
+    {
+        CallNetFunction(_RpcApplyStatusEffect, FunctionReceivers.All, dataId);
+    }
+
+    [NetFunction]
+    protected void _RpcApplyStatusEffect(int dataId)
     {
         // Destroy applied status effect, because it cannot be stacked
         RemoveAppliedStatusEffect(dataId);
@@ -1132,11 +1177,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [ClientRpc]
-    public void RpcEffect(NetworkInstanceId triggerId, byte effectType, int dataId, byte actionId)
+    public void RpcEffect(uint triggerId, byte effectType, int dataId, byte actionId)
     {
-        GameObject triggerObject = isServer ? NetworkServer.FindLocalObject(triggerId) : ClientScene.FindLocalObject(triggerId);
-        if (triggerObject != null)
+        CallNetFunction(_RpcEffect, FunctionReceivers.All, triggerId, effectType, dataId, actionId);
+    }
+
+    [NetFunction]
+    protected void _RpcEffect(uint triggerId, byte effectType, int dataId, byte actionId)
+    {
+        LiteNetLibIdentity triggerObject;
+        if (Manager.Assets.TryGetSpawnedObject(triggerId, out triggerObject))
         {
             if (effectType == RPC_EFFECT_DAMAGE_SPAWN || effectType == RPC_EFFECT_DAMAGE_HIT)
             {
@@ -1188,31 +1238,51 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
-    [ClientRpc]
     public void RpcDash()
     {
+        CallNetFunction(_RpcDash, FunctionReceivers.All);
+    }
+
+    [NetFunction]
+    protected void _RpcDash()
+    {
         // Just play dash animation on another clients
-        if (!isLocalPlayer)
+        if (!IsOwnerClient)
         {
             isDashing = true;
             dashingTime = Time.unscaledTime;
         }
     }
 
-    [TargetRpc]
-    public void TargetDead(NetworkConnection conn)
+    public void TargetDead(long conn)
+    {
+        CallNetFunction(_TargetDead, conn);
+    }
+
+    [NetFunction]
+    protected void _TargetDead()
     {
         deathTime = Time.unscaledTime;
     }
 
-    [TargetRpc]
-    public void TargetSpawn(NetworkConnection conn, Vector3 position)
+    public void TargetSpawn(long conn, Vector3 position)
+    {
+        CallNetFunction(_TargetSpawn, conn, position);
+    }
+
+    [NetFunction]
+    protected void _TargetSpawn(Vector3 position)
     {
         transform.position = position;
     }
 
-    [TargetRpc]
-    private void TargetRewardCurrency(NetworkConnection conn, string currencyId, int amount)
+    public void TargetRewardCurrency(long conn, string currencyId, int amount)
+    {
+        CallNetFunction(_TargetRewardCurrency, conn, currencyId, amount);
+    }
+
+    [NetFunction]
+    protected void _TargetRewardCurrency(string currencyId, int amount)
     {
         MonetizationManager.Save.AddCurrency(currencyId, amount);
     }
