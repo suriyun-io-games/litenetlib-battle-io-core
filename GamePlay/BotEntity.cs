@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization;
 
 public class BotEntity : CharacterEntity
 {
@@ -20,8 +21,12 @@ public class BotEntity : CharacterEntity
     public float forgetEnemyDuration = 3f;
     public float randomDashDurationMin = 3f;
     public float randomDashDurationMax = 5f;
-    public float randomMoveDistance = 5f;
-    public float detectEnemyDistance = 2f;
+    [FormerlySerializedAs("randomMoveDistance")]
+    public float randomMoveDistanceMin = 5f;
+    public float randomMoveDistanceMax = 5f;
+    [FormerlySerializedAs("detectEnemyDistance")]
+    public float detectEnemyDistanceMin = 2f;
+    public float detectEnemyDistanceMax = 2f;
     public float turnSpeed = 5f;
     public int[] navMeshAreas = new int[] { 0, 1, 2 };
     public Characteristic characteristic;
@@ -38,14 +43,13 @@ public class BotEntity : CharacterEntity
     private float randomDashDuration;
     private CharacterEntity enemy;
     private Vector3 dashDirection;
-    private Queue<Vector3> navPaths;
+    private Queue<Vector3> navPaths = new Queue<Vector3>();
     private Vector3 targetPosition;
     private Vector3 lookingPosition;
 
     public override void OnStartServer()
     {
         base.OnStartServer();
-
         ServerSpawn(false);
         lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
         lastAttackTime = Time.unscaledTime - attackDuration;
@@ -55,6 +59,11 @@ public class BotEntity : CharacterEntity
     public override void OnStartOwnerClient()
     {
         // Do nothing
+    }
+
+    public int RandomPosNeg()
+    {
+        return Random.value > 0.5f ? -1 : 1;
     }
 
     protected override void UpdateMovements()
@@ -84,23 +93,23 @@ public class BotEntity : CharacterEntity
             if (enemy != null)
             {
                 GetMovePaths(new Vector3(
-                    enemy.CacheTransform.position.x + Random.Range(-1f, 1f) * detectEnemyDistance,
+                    enemy.CacheTransform.position.x + (Random.Range(detectEnemyDistanceMin, detectEnemyDistanceMax) * RandomPosNeg()),
                     0,
-                    enemy.CacheTransform.position.z + Random.Range(-1f, 1f) * detectEnemyDistance));
+                    enemy.CacheTransform.position.z + (Random.Range(detectEnemyDistanceMin, detectEnemyDistanceMax) * RandomPosNeg())));
             }
             else if (isFixRandomMoveAroundPoint)
             {
                 GetMovePaths(new Vector3(
-                    fixRandomMoveAroundPoint.x + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance,
+                    fixRandomMoveAroundPoint.x + (fixRandomMoveAroundDistance * RandomPosNeg()),
                     0,
-                    fixRandomMoveAroundPoint.z + Random.Range(-1f, 1f) * fixRandomMoveAroundDistance));
+                    fixRandomMoveAroundPoint.z + (fixRandomMoveAroundDistance * RandomPosNeg())));
             }
             else
             {
                 GetMovePaths(new Vector3(
-                    CacheTransform.position.x + Random.Range(-1f, 1f) * randomMoveDistance,
+                    CacheTransform.position.x + (Random.Range(randomMoveDistanceMin, randomMoveDistanceMax) * RandomPosNeg()),
                     0,
-                    CacheTransform.position.z + Random.Range(-1f, 1f) * randomMoveDistance));
+                    CacheTransform.position.z + (Random.Range(randomMoveDistanceMin, randomMoveDistanceMax) * RandomPosNeg())));
             }
         }
 
@@ -162,7 +171,9 @@ public class BotEntity : CharacterEntity
         // Gets a vector that points from the player's position to the target's.
         isReachedTarget = IsReachedTargetPosition();
         if (!isReachedTarget)
+        {
             Move(isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized);
+        }
 
         if (isReachedTarget)
         {
@@ -178,6 +189,19 @@ public class BotEntity : CharacterEntity
         UpdateStatPoint();
     }
 
+    void OnDrawGizmos()
+    {
+        if (path != null && path.corners != null && path.corners.Length > 0)
+        {
+            for (int i = path.corners.Length - 1; i >= 1; --i)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(path.corners[i], path.corners[i - 1]);
+            }
+        }
+    }
+
+    NavMeshPath path;
     private void GetMovePaths(Vector3 position)
     {
         int areaMask = 0;
@@ -194,21 +218,21 @@ public class BotEntity : CharacterEntity
         }
         NavMeshPath navPath = new NavMeshPath();
         NavMeshHit navHit;
-        if (NavMesh.SamplePosition(position, out navHit, 5f, areaMask) &&
+        if (NavMesh.SamplePosition(position, out navHit, 1000f, areaMask) &&
             NavMesh.CalculatePath(CacheTransform.position, navHit.position, areaMask, navPath))
         {
+            path = navPath;
             navPaths = new Queue<Vector3>(navPath.corners);
             // Dequeue first path it's not require for future movement
             navPaths.Dequeue();
+            // Set movement
+            if (navPaths.Count > 0)
+                targetPosition = navPaths.Dequeue();
         }
-        // Initial queue
-        if (navPaths == null)
-            navPaths = new Queue<Vector3>();
-        // Set first target position immediately
-        if (navPaths.Count > 0)
-            targetPosition = navPaths.Dequeue();
         else
+        {
             targetPosition = position;
+        }
     }
 
     private void UpdateStatPoint()
@@ -254,7 +278,7 @@ public class BotEntity : CharacterEntity
     {
         enemy = null;
         var gameplayManager = GameplayManager.Singleton;
-        var colliders = Physics.OverlapSphere(CacheTransform.position, detectEnemyDistance);
+        var colliders = Physics.OverlapSphere(CacheTransform.position, detectEnemyDistanceMin);
         foreach (var collider in colliders)
         {
             var character = collider.GetComponent<CharacterEntity>();
@@ -265,17 +289,6 @@ public class BotEntity : CharacterEntity
             }
         }
         return false;
-    }
-
-    protected override void OnCollisionStay(Collision collision)
-    {
-        base.OnCollisionStay(collision);
-
-        if (collision.collider.CompareTag("Wall"))
-        {
-            // Find another position to move in next frame
-            lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
-        }
     }
 
     public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)

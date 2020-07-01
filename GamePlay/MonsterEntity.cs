@@ -39,7 +39,7 @@ public class MonsterEntity : CharacterEntity
     [Range(0, 100)]
     public int monsterTypeId;
 
-    private Queue<Vector3> navPaths;
+    private Queue<Vector3> navPaths = new Queue<Vector3>();
     private Vector3 targetPosition;
     private float lastUpdateMovementTime;
     private float lastAttackTime;
@@ -164,7 +164,7 @@ public class MonsterEntity : CharacterEntity
             attackingActionId = -1;
             return;
         }
-        
+
         if (Hp <= 0)
         {
             ServerRespawn(false);
@@ -196,7 +196,7 @@ public class MonsterEntity : CharacterEntity
                 lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
             }
         }
-        
+
         if (Time.unscaledTime - lastUpdateMovementTime >= updateMovementDuration)
         {
             lastUpdateMovementTime = Time.unscaledTime;
@@ -209,19 +209,25 @@ public class MonsterEntity : CharacterEntity
             }
         }
 
-        var rotatePosition = targetPosition;
+        var lookingPosition = targetPosition;
         if (enemy == null || enemy.IsDead || Time.unscaledTime - lastAttackTime >= forgetEnemyDuration)
         {
+            enemy = null;
             // Try find enemy
-            if (FindEnemy(out enemy))
+            switch (characteristic)
             {
-                lastAttackTime = Time.unscaledTime - attackDuration;
+                case Characteristic.Aggressive:
+                    if (FindEnemy(out enemy))
+                    {
+                        lastAttackTime = Time.unscaledTime - attackDuration;
+                    }
+                    break;
             }
         }
         else
         {
             // Set target rotation to enemy position
-            rotatePosition = enemy.CacheTransform.position;
+            lookingPosition = enemy.CacheTransform.position;
         }
 
         attackingActionId = -1;
@@ -237,7 +243,9 @@ public class MonsterEntity : CharacterEntity
                         // Attack when nearby enemy
                         sbyte usingSkillHotkeyId;
                         if (RandomUseSkill(out usingSkillHotkeyId))
+                        {
                             this.usingSkillHotkeyId = usingSkillHotkeyId;
+                        }
                         else
                             attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
                         lastAttackTime = Time.unscaledTime;
@@ -259,11 +267,24 @@ public class MonsterEntity : CharacterEntity
                 targetPosition = navPaths.Dequeue();
         }
         // Rotate to target
-        var rotateHeading = rotatePosition - CacheTransform.position;
+        var rotateHeading = lookingPosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
     }
 
+    void OnDrawGizmos()
+    {
+        if (path != null && path.corners != null && path.corners.Length > 0)
+        {
+            for (int i = path.corners.Length - 1; i >= 1; --i)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(path.corners[i], path.corners[i - 1]);
+            }
+        }
+    }
+
+    NavMeshPath path;
     private void GetMovePaths(Vector3 position)
     {
         int areaMask = 0;
@@ -280,21 +301,21 @@ public class MonsterEntity : CharacterEntity
         }
         NavMeshPath navPath = new NavMeshPath();
         NavMeshHit navHit;
-        if (NavMesh.SamplePosition(position, out navHit, 5f, areaMask) &&
+        if (NavMesh.SamplePosition(position, out navHit, 1000f, areaMask) &&
             NavMesh.CalculatePath(CacheTransform.position, navHit.position, areaMask, navPath))
         {
+            path = navPath;
             navPaths = new Queue<Vector3>(navPath.corners);
             // Dequeue first path it's not require for future movement
             navPaths.Dequeue();
+            // Set movement
+            if (navPaths.Count > 0)
+                targetPosition = navPaths.Dequeue();
         }
-        // Initial queue
-        if (navPaths == null)
-            navPaths = new Queue<Vector3>();
-        // Set first target position immediately
-        if (navPaths.Count > 0)
-            targetPosition = navPaths.Dequeue();
         else
+        {
             targetPosition = position;
+        }
     }
 
     private bool RandomUseSkill(out sbyte hotkeyId)
@@ -343,17 +364,6 @@ public class MonsterEntity : CharacterEntity
             }
         }
         return false;
-    }
-
-    protected override void OnCollisionStay(Collision collision)
-    {
-        base.OnCollisionStay(collision);
-
-        if (collision.collider.CompareTag("Wall"))
-        {
-            // Find another position to move in next frame
-            lastUpdateMovementTime = Time.unscaledTime - updateMovementDuration;
-        }
     }
 
     public override bool ReceiveDamage(CharacterEntity attacker, int damage, byte type, int dataId, byte actionId)
