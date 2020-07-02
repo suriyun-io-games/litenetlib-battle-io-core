@@ -13,6 +13,8 @@ public class DamageEntity : MonoBehaviour
     public StatusEffectEntity statusEffectPrefab;
     public AudioClip[] hitFx;
     public float radius;
+    public float explosionForceRadius;
+    public float explosionForce;
     public float lifeTime;
     public float spawnForwardOffset;
     public float speed;
@@ -118,7 +120,10 @@ public class DamageEntity : MonoBehaviour
     private void OnDestroy()
     {
         if (!isDead)
+        {
+            Explode(null);
             EffectEntity.PlayEffect(explodeEffectPrefab, CacheTransform);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -138,17 +143,11 @@ public class DamageEntity : MonoBehaviour
             ApplyDamage(otherCharacter);
         }
 
-        Collider[] colliders = Physics.OverlapSphere(CacheTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
-        for (int i = 0; i < colliders.Length; i++)
+        if (Explode(otherCharacter))
         {
-            var target = colliders[i].GetComponent<CharacterEntity>();
-            // If not character or character is attacker, skip it.
-            if (target == null || target == otherCharacter || target.ObjectId == attackerNetId || target.Hp <= 0)
-                continue;
-
             hitSomeAliveCharacter = true;
-            ApplyDamage(target);
         }
+
         // If hit character (So it will not wall) but not hit alive character, don't destroy, let's find another target.
         if (otherCharacter != null && !hitSomeAliveCharacter)
             return;
@@ -164,6 +163,23 @@ public class DamageEntity : MonoBehaviour
         isDead = true;
     }
 
+    private bool Explode(CharacterEntity otherCharacter)
+    {
+        var hitSomeAliveCharacter = false;
+        Collider[] colliders = Physics.OverlapSphere(CacheTransform.position, radius, 1 << GameInstance.Singleton.characterLayer);
+        CharacterEntity hitCharacter;
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            hitCharacter = colliders[i].GetComponent<CharacterEntity>();
+            // If not character or character is attacker, skip it.
+            if (hitCharacter == null || hitCharacter == otherCharacter || hitCharacter.ObjectId == attackerNetId || hitCharacter.Hp <= 0)
+                continue;
+            ApplyDamage(hitCharacter);
+            hitSomeAliveCharacter = true;
+        }
+        return hitSomeAliveCharacter;
+    }
+
     private void ApplyDamage(CharacterEntity target)
     {
         // Damage receiving calculation on server only
@@ -173,6 +189,7 @@ public class DamageEntity : MonoBehaviour
             if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(target, Attacker))
                 target.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
         }
+        target.CacheRigidbody.AddExplosionForce(explosionForce, CacheTransform.position, explosionForceRadius);
     }
 
     private float GetColliderExtents()
