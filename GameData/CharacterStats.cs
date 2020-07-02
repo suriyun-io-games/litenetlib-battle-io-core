@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using LiteNetLib.Utils;
 
 [System.Serializable]
-public struct CharacterStats
+public struct CharacterStats : INetSerializable
 {
     public int addHp;
     public int addAttack;
@@ -14,6 +14,32 @@ public struct CharacterStats
     public float addHpRecoveryRate;
     public float addDamageRateLeechHp;
     public int addSpreadDamages;
+
+    public void Deserialize(NetDataReader reader)
+    {
+        addHp = reader.GetInt();
+        addAttack = reader.GetInt();
+        addDefend = reader.GetInt();
+        addMoveSpeed = reader.GetInt();
+        addExpRate = reader.GetFloat();
+        addScoreRate = reader.GetFloat();
+        addHpRecoveryRate = reader.GetFloat();
+        addDamageRateLeechHp = reader.GetFloat();
+        addSpreadDamages = reader.GetInt();
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(addHp);
+        writer.Put(addAttack);
+        writer.Put(addDefend);
+        writer.Put(addMoveSpeed);
+        writer.Put(addExpRate);
+        writer.Put(addScoreRate);
+        writer.Put(addHpRecoveryRate);
+        writer.Put(addDamageRateLeechHp);
+        writer.Put(addSpreadDamages);
+    }
 
     public static CharacterStats operator +(CharacterStats a, CharacterStats b)
     {
