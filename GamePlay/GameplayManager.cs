@@ -48,7 +48,11 @@ public class GameplayManager : LiteNetLibBehaviour
             return;
         }
         Singleton = this;
+    }
 
+    public override void OnSetup()
+    {
+        base.OnSetup();
         powerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
