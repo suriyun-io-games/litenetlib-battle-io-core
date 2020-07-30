@@ -336,23 +336,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         deathTime = Time.unscaledTime;
     }
 
-    public override void OnStartClient()
-    {
-        if (!IsServer)
-        {
-            OnHeadChanged(selectHead);
-            OnCharacterChanged(selectCharacter);
-            OnWeaponChanged(selectWeapon);
-            OnCustomEquipmentsChanged(Operation.Dirty, 0);
-        }
-    }
-
     public override void OnStartServer()
     {
-        OnHeadChanged(selectHead);
-        OnCharacterChanged(selectCharacter);
-        OnWeaponChanged(selectWeapon);
-        OnCustomEquipmentsChanged(Operation.Dirty, 0);
         attackingActionId = -1;
         usingSkillHotkeyId = -1;
     }
