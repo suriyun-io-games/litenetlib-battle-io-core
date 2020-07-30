@@ -103,5 +103,12 @@ public class IONetworkGameRule : BaseNetworkGameRule
 
         if (overrideBotPrefab != null)
             networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
+
+        foreach (var obj in networkManager.Assets.GetSceneObjects())
+        {
+            var gameplayManager = obj.GetComponentInChildren<GameplayManager>();
+            if (gameplayManager)
+                gameplayManager.RegisterPrefabs();
+        }
     }
 }
