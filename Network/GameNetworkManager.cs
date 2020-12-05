@@ -34,7 +34,7 @@ public class GameNetworkManager : BaseNetworkGameManager
         return msg;
     }
 
-    protected void ReadMsgCharacterAttack(LiteNetLibMessageHandler messageHandler)
+    protected void ReadMsgCharacterAttack(MessageHandlerData messageHandler)
     {
         var msg = messageHandler.ReadMessage<OpMsgCharacterAttack>();
         // Instantiates damage entities on clients only
@@ -42,7 +42,7 @@ public class GameNetworkManager : BaseNetworkGameManager
             DamageEntity.InstantiateNewEntity(msg);
     }
 
-    protected void ReadMsgCharacterUseSkill(LiteNetLibMessageHandler messageHandler)
+    protected void ReadMsgCharacterUseSkill(MessageHandlerData messageHandler)
     {
         var msg = messageHandler.ReadMessage<OpMsgCharacterUseSkill>();
         // Instantiates damage entities on clients only
