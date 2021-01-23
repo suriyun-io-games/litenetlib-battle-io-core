@@ -55,9 +55,9 @@ public class GameNetworkManager : BaseNetworkGameManager
         MakeJoinMessage().Serialize(writer);
     }
 
-    protected override void RegisterClientMessages()
+    protected override void RegisterMessages()
     {
-        base.RegisterClientMessages();
+        base.RegisterMessages();
         RegisterClientMessage(new OpMsgCharacterAttack().OpId, ReadMsgCharacterAttack);
         RegisterClientMessage(new OpMsgCharacterUseSkill().OpId, ReadMsgCharacterUseSkill);
     }

@@ -132,6 +132,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         get { return hp <= 0; }
     }
 
+    public override bool IsBot
+    {
+        get { return false; }
+    }
+
     public System.Action onDead;
     protected Camera targetCamera;
     protected CharacterModel characterModel;

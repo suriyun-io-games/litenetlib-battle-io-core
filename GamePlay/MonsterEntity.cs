@@ -13,6 +13,11 @@ public class MonsterEntity : CharacterEntity
         NoneAttack,
         NoneAggressive,
     }
+    public override bool IsBot
+    {
+        get { return true; }
+    }
+
     public const float ReachedTargetDistance = 0.1f;
     [Header("Monster configs")]
     public float minimumAttackRange = 5f;

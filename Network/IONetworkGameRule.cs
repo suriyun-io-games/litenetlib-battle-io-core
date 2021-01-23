@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using LiteNetLibManager;
+using System.Collections.Generic;
 
 public class IONetworkGameRule : BaseNetworkGameRule
 {
@@ -42,10 +43,6 @@ public class IONetworkGameRule : BaseNetworkGameRule
     {
         if (startWeapon != null)
             character.selectWeapon = startWeapon.GetHashId();
-    }
-
-    protected override void EndMatch()
-    {
     }
 
     public override bool CanCharacterRespawn(BaseNetworkGameCharacter character, params object[] extraParams)
@@ -93,22 +90,27 @@ public class IONetworkGameRule : BaseNetworkGameRule
     public override void RegisterPrefabs()
     {
         if (GameInstance.Singleton.characterPrefab != null)
-            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.characterPrefab.Identity);
+            NetworkManager.Assets.RegisterPrefab(GameInstance.Singleton.characterPrefab.Identity);
 
         if (GameInstance.Singleton.botPrefab != null)
-            networkManager.Assets.RegisterPrefab(GameInstance.Singleton.botPrefab.Identity);
+            NetworkManager.Assets.RegisterPrefab(GameInstance.Singleton.botPrefab.Identity);
 
         if (overrideCharacterPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
+            NetworkManager.Assets.RegisterPrefab(overrideCharacterPrefab.Identity);
 
         if (overrideBotPrefab != null)
-            networkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
+            NetworkManager.Assets.RegisterPrefab(overrideBotPrefab.Identity);
 
-        foreach (var obj in networkManager.Assets.GetSceneObjects())
+        foreach (var obj in NetworkManager.Assets.GetSceneObjects())
         {
             var gameplayManager = obj.GetComponentInChildren<GameplayManager>();
             if (gameplayManager)
                 gameplayManager.RegisterPrefabs();
         }
+    }
+
+    protected override List<BaseNetworkGameCharacter> GetBots()
+    {
+        return new List<BaseNetworkGameCharacter>(FindObjectsOfType<BotEntity>());
     }
 }
