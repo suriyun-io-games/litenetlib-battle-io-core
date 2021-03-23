@@ -90,7 +90,7 @@ public class SkillData : ScriptableObject
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity) && !(character is MonsterEntity))
-                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
+                    GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, 0, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
             }
             addRotationY += addingRotationY;
         }
