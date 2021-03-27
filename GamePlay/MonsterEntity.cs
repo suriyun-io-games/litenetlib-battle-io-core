@@ -345,7 +345,7 @@ public class MonsterEntity : CharacterEntity
     private bool IsReachedTargetPosition()
     {
         if (enemy != null)
-            return Vector3.Distance(targetPosition, CacheTransform.position) < Mathf.Min(enemy.CacheCollider.bounds.size.x, enemy.CacheCollider.bounds.size.z);
+            return Vector3.Distance(targetPosition, CacheTransform.position) < Mathf.Min(enemy.CacheCharacterMovement.CacheCharacterController.bounds.size.x, enemy.CacheCharacterMovement.CacheCharacterController.bounds.size.z);
         return Vector3.Distance(targetPosition, CacheTransform.position) < ReachedTargetDistance;
     }
 
