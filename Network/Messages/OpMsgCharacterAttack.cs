@@ -15,7 +15,7 @@ public class OpMsgCharacterAttack : BaseOpMsg
 
     public int weaponId;
     public byte actionId;
-    public Vector3 direction;
+    public Vector3 targetPosition;
     public uint attackerNetId;
     public float addRotationX;
     public float addRotationY;
@@ -24,7 +24,7 @@ public class OpMsgCharacterAttack : BaseOpMsg
     {
         weaponId = reader.GetInt();
         actionId = reader.GetByte();
-        direction = reader.GetVector3();
+        targetPosition = reader.GetVector3();
         attackerNetId = reader.GetPackedUInt();
         addRotationX = reader.GetFloat();
         addRotationY = reader.GetFloat();
@@ -34,7 +34,7 @@ public class OpMsgCharacterAttack : BaseOpMsg
     {
         writer.Put(weaponId);
         writer.Put(actionId);
-        writer.PutVector3(direction);
+        writer.PutVector3(targetPosition);
         writer.PutPackedUInt(attackerNetId);
         writer.Put(addRotationX);
         writer.Put(addRotationY);

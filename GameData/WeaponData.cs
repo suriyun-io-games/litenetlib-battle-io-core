@@ -17,7 +17,7 @@ public class WeaponData : ItemData
     public int weaponAnimId;
     public readonly Dictionary<short, AttackAnimation> AttackAnimations = new Dictionary<short, AttackAnimation>();
 
-    public void Launch(CharacterEntity attacker, byte actionId)
+    public void Launch(CharacterEntity attacker, Vector3 targetPosition, byte actionId)
     {
         if (attacker == null || !GameNetworkManager.Singleton.IsServer)
             return;
@@ -42,16 +42,11 @@ public class WeaponData : ItemData
 
         for (var i = 0; i < spread; ++i)
         {
-            // An transform's rotation, position will be set when set `Attacker`
-            // So don't worry about them before damage entity going to spawn
-            // Velocity also being set when set `Attacker` too.
-            var direction = attacker.CacheTransform.forward;
-
             var damagePrefab = this.damagePrefab;
             if (AttackAnimations.ContainsKey(actionId) &&
                 AttackAnimations[actionId].damagePrefab != null)
                 damagePrefab = AttackAnimations[actionId].damagePrefab;
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, AttackAnimations[actionId].isAnimationForLeftHandWeapon, direction, attacker.ObjectId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, AttackAnimations[actionId].isAnimationForLeftHandWeapon, targetPosition, attacker.ObjectId, addRotationX, addRotationY);
             if (damageEntity)
             {
                 damageEntity.weaponDamage = Mathf.CeilToInt(damage);
@@ -64,7 +59,7 @@ public class WeaponData : ItemData
             var msg = new OpMsgCharacterAttack();
             msg.weaponId = GetHashId();
             msg.actionId = actionId;
-            msg.direction = direction;
+            msg.targetPosition = targetPosition;
             msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;

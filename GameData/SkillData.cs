@@ -34,7 +34,7 @@ public class SkillData : ScriptableObject
     [Header("SFX")]
     public AudioClip[] attackFx;
 
-    public void Launch(CharacterEntity attacker)
+    public void Launch(CharacterEntity attacker, Vector3 targetPosition)
     {
         if (attacker == null || !GameNetworkManager.Singleton.IsServer)
             return;
@@ -64,12 +64,7 @@ public class SkillData : ScriptableObject
 
         for (var i = 0; i < spread; ++i)
         {
-            // An transform's rotation, position will be set when set `Attacker`
-            // So don't worry about them before damage entity going to spawn
-            // Velocity also being set when set `Attacker` too.
-            var direction = attacker.CacheTransform.forward;
-
-            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, direction, attacker.ObjectId, addRotationX, addRotationY);
+            var damageEntity = DamageEntity.InstantiateNewEntity(damagePrefab, false, targetPosition, attacker.ObjectId, addRotationX, addRotationY);
             if (damageEntity)
             {
                 damageEntity.weaponDamage = Mathf.CeilToInt(damage);
@@ -81,7 +76,7 @@ public class SkillData : ScriptableObject
             // Telling nearby clients that the character use skills
             var msg = new OpMsgCharacterUseSkill();
             msg.skillId = GetHashId();
-            msg.direction = direction;
+            msg.targetPosition = targetPosition;
             msg.attackerNetId = attacker.ObjectId;
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;

@@ -14,7 +14,7 @@ public class OpMsgCharacterUseSkill : BaseOpMsg
     }
 
     public int skillId;
-    public Vector3 direction;
+    public Vector3 targetPosition;
     public uint attackerNetId;
     public float addRotationX;
     public float addRotationY;
@@ -22,7 +22,7 @@ public class OpMsgCharacterUseSkill : BaseOpMsg
     public override void Deserialize(NetDataReader reader)
     {
         skillId = reader.GetInt();
-        direction = reader.GetVector3();
+        targetPosition = reader.GetVector3();
         attackerNetId = reader.GetPackedUInt();
         addRotationX = reader.GetFloat();
         addRotationY = reader.GetFloat();
@@ -31,7 +31,7 @@ public class OpMsgCharacterUseSkill : BaseOpMsg
     public override void Serialize(NetDataWriter writer)
     {
         writer.Put(skillId);
-        writer.PutVector3(direction);
+        writer.PutVector3(targetPosition);
         writer.PutPackedUInt(attackerNetId);
         writer.Put(addRotationX);
         writer.Put(addRotationY);
