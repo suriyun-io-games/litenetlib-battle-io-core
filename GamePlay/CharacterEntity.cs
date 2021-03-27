@@ -147,12 +147,12 @@ public class CharacterEntity : BaseNetworkGameCharacter
     protected Dictionary<int, CustomEquipmentData> customEquipmentDict = new Dictionary<int, CustomEquipmentData>();
     protected Dictionary<int, StatusEffectEntity> appliedStatusEffects = new Dictionary<int, StatusEffectEntity>();
     protected bool isMobileInput;
-    protected Vector2 inputMove;
-    protected Vector2 inputDirection;
+    protected Vector3 inputMove;
+    protected Vector3 inputDirection;
     protected bool inputAttack;
     protected bool inputJump;
     protected bool isDashing;
-    protected Vector2 dashInputMove;
+    protected Vector3 dashInputMove;
     protected float dashingTime;
     protected Dictionary<sbyte, SkillData> skills = new Dictionary<sbyte, SkillData>();
     protected float[] lastSkillUseTimes = new float[8];
@@ -457,8 +457,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         bool canAttack = isMobileInput || !EventSystem.current.IsPointerOverGameObject();
         // Reset input states
-        inputMove = Vector2.zero;
-        inputDirection = Vector2.zero;
+        inputMove = Vector3.zero;
+        inputDirection = Vector3.zero;
         inputAttack = false;
 
         if (inputCancelUsingSkill = InputManager.GetButton("CancelUsingSkill"))
@@ -469,7 +469,10 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
         if (canControl)
         {
-            inputMove = new Vector2(InputManager.GetAxis("Horizontal", false), InputManager.GetAxis("Vertical", false));
+            Vector3 cameraForward = targetCamera.transform.forward;
+            Vector3 cameraRight = targetCamera.transform.right;
+            inputMove += InputManager.GetAxis("Vertical", false) * cameraForward;
+            inputMove += InputManager.GetAxis("Horizontal", false) * cameraRight;
 
             // Jump
             if (!inputJump)
@@ -479,7 +482,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
             {
                 if (isMobileInput)
                 {
-                    inputDirection = new Vector2(InputManager.GetAxis("Mouse X", false), InputManager.GetAxis("Mouse Y", false));
+                    inputDirection += InputManager.GetAxis("Mouse Y", false) * cameraForward;
+                    inputDirection += InputManager.GetAxis("Mouse X", false) * cameraRight;
                     if (canAttack)
                     {
                         inputAttack = inputDirection.magnitude != 0;
@@ -488,7 +492,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
                             // Find out that player pressed on skill hotkey or not
                             for (sbyte i = 0; i < 8; ++i)
                             {
-                                inputDirection = new Vector2(InputManager.GetAxis("Skill X " + i, false), InputManager.GetAxis("Skill Y " + i, false));
+                                inputDirection = Vector3.zero;
+                                inputDirection += InputManager.GetAxis("Skill Y " + i, false) * cameraForward;
+                                inputDirection += InputManager.GetAxis("Skill X " + i, false) * cameraRight;
                                 if (inputDirection.magnitude != 0 && holdingUseSkillHotkeyId < 0)
                                 {
                                     // Start drag
@@ -515,6 +521,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 else
                 {
                     inputDirection = (InputManager.MousePosition() - targetCamera.WorldToScreenPoint(CacheTransform.position)).normalized;
+                    inputDirection = new Vector3(inputDirection.x, 0, inputDirection.y);
                     if (canAttack)
                     {
                         inputAttack = InputManager.GetButton("Fire1");
@@ -542,8 +549,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 isDashing = InputManager.GetButtonDown("Dash") && isGrounded;
                 if (isDashing)
                 {
+                    if (isMobileInput)
+                        dashInputMove = inputMove.normalized;
+                    else
+                        dashInputMove = new Vector3(CacheTransform.forward.x, 0f, CacheTransform.forward.z).normalized;
                     inputAttack = false;
-                    dashInputMove = new Vector2(CacheTransform.forward.x, CacheTransform.forward.z).normalized;
                     dashingTime = Time.unscaledTime;
                     CmdDash();
                 }
@@ -638,8 +648,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!IsOwnerClient)
             return;
 
-        var moveDirection = new Vector3(inputMove.x, 0, inputMove.y);
-        var dashDirection = new Vector3(dashInputMove.x, 0, dashInputMove.y);
+        var moveDirection = inputMove;
+        var dashDirection = dashInputMove;
 
         Move(isDashing ? dashDirection : moveDirection);
         // Turn character to move direction
@@ -666,11 +676,11 @@ public class CharacterEntity : BaseNetworkGameCharacter
         inputJump = false;
     }
 
-    protected void Rotate(Vector2 direction)
+    protected void Rotate(Vector3 direction)
     {
         if (direction.magnitude != 0)
         {
-            int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.y)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
+            int newRotation = (int)(Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z)).eulerAngles.y + targetCamera.transform.eulerAngles.y);
             Quaternion targetRotation = Quaternion.Euler(0, newRotation, 0);
             CacheTransform.rotation = targetRotation;
         }
