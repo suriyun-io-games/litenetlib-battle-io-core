@@ -137,10 +137,15 @@ public class DamageEntity : MonoBehaviour
             return;
 
         var hitSomeAliveCharacter = false;
-        if (otherCharacter != null && otherCharacter.Hp > 0)
+        if (otherCharacter != null &&
+            otherCharacter.Hp > 0 &&
+            !otherCharacter.isInvincible &&
+            GameplayManager.Singleton.CanReceiveDamage(otherCharacter, attacker))
         {
-            hitSomeAliveCharacter = true;
+            if (!otherCharacter.IsHidding)
+                EffectEntity.PlayEffect(hitEffectPrefab, otherCharacter.effectTransform);
             ApplyDamage(otherCharacter);
+            hitSomeAliveCharacter = true;
         }
 
         if (Explode(otherCharacter))
@@ -148,7 +153,7 @@ public class DamageEntity : MonoBehaviour
             hitSomeAliveCharacter = true;
         }
 
-        // If hit character (So it will not wall) but not hit alive character, don't destroy, let's find another target.
+        // If hit character (not the wall) but not hit alive character, don't destroy, let's find another target.
         if (otherCharacter != null && !hitSomeAliveCharacter)
             return;
 
@@ -172,8 +177,15 @@ public class DamageEntity : MonoBehaviour
         {
             hitCharacter = colliders[i].GetComponent<CharacterEntity>();
             // If not character or character is attacker, skip it.
-            if (hitCharacter == null || hitCharacter == otherCharacter || hitCharacter.ObjectId == attackerNetId || hitCharacter.Hp <= 0)
+            if (hitCharacter == null ||
+                hitCharacter == otherCharacter ||
+                hitCharacter.ObjectId == attackerNetId ||
+                hitCharacter.Hp <= 0 ||
+                hitCharacter.isInvincible ||
+                !GameplayManager.Singleton.CanReceiveDamage(hitCharacter, attacker))
                 continue;
+            if (!hitCharacter.IsHidding)
+                EffectEntity.PlayEffect(hitEffectPrefab, hitCharacter.effectTransform);
             ApplyDamage(hitCharacter);
             hitSomeAliveCharacter = true;
         }

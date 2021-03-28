@@ -981,8 +981,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (Hp <= 0 || isInvincible)
             return false;
 
-        var gameplayManager = GameplayManager.Singleton;
-        if (!gameplayManager.CanReceiveDamage(this, attacker))
+        if (!GameplayManager.Singleton.CanReceiveDamage(this, attacker))
             return false;
 
         RpcEffect(attacker.ObjectId, type, dataId, actionId);
