@@ -102,7 +102,7 @@ public class BRCharacterEntityExtra : LiteNetLibBehaviour
 
         if (brGameManager.currentState == BRState.WaitingForPlayers || isSpawned)
         {
-            if (IsServer && !botDeadRemoveCalled && CacheCharacterEntity is BotEntity && CacheCharacterEntity.IsDead)
+            if (IsServer && !botDeadRemoveCalled && botEntity != null && CacheCharacterEntity.IsDead)
             {
                 botDeadRemoveCalled = true;
                 StartCoroutine(BotDeadRemoveRoutine());
