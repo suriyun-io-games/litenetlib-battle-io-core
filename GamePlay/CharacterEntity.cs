@@ -150,6 +150,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField]
     public string extra;
 
+    [SyncField(syncMode = LiteNetLibSyncField.SyncMode.ClientMulticast)]
+    public Vector3 aimPosition;
+
     [HideInInspector]
     public int rank = 0;
 
@@ -199,7 +202,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     public float deathTime { get; private set; }
     public float invincibleTime { get; private set; }
     public int defaultSelectWeapon { get; private set; }
-    public Vector3 aimPosition { get; protected set; }
     public bool currentActionIsForLeftHand { get; protected set; }
 
     public Dictionary<sbyte, SkillData> Skills
@@ -691,6 +693,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateViewMode(bool force = false)
     {
+        if (!IsOwnerClient)
+            return;
+
         if (force || dirtyViewMode != viewMode)
         {
             dirtyViewMode = viewMode;
@@ -714,6 +719,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     protected virtual void UpdateAimPosition()
     {
+        if (!(IsOwnerClient || (IsServer && ConnectionId <= 0)) || !weaponData)
+            return;
+
         float attackDist = weaponData.damagePrefab.GetAttackRange();
         switch (viewMode)
         {
@@ -825,7 +833,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         // Turn character to move direction
         if (inputDirection.magnitude <= 0 && inputMove.magnitude > 0 || viewMode == ViewMode.ThirdPerson)
             inputDirection = inputMove;
-        if (characterModel.TempAnimator != null && characterModel.TempAnimator.GetBool("DoAction") && viewMode == ViewMode.ThirdPerson)
+        if (characterModel && characterModel.TempAnimator && characterModel.TempAnimator.GetBool("DoAction") && viewMode == ViewMode.ThirdPerson)
             inputDirection = cameraForward;
         if (!IsDead)
             Rotate(isDashing ? dashInputMove : inputDirection);
