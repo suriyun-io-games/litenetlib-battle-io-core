@@ -347,6 +347,20 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
     }
 
+    public virtual float TotalBlockReduceDamageRate
+    {
+        get
+        {
+            var total = GameplayManager.Singleton.baseBlockReduceDamageRate + SumAddStats.addBlockReduceDamageRate;
+
+            var maxValue = GameplayManager.Singleton.maxBlockReduceDamageRate;
+            if (total < maxValue)
+                return total;
+            else
+                return maxValue;
+        }
+    }
+
     public virtual float TotalDamageRateLeechHp
     {
         get
@@ -367,6 +381,26 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 return total;
             else
                 return maxValue;
+        }
+    }
+
+    public virtual float TotalIncreaseDamageRate
+    {
+        get
+        {
+            var total = SumAddStats.increaseDamageRate;
+            if (total < -1f)
+                total = -0.9f;
+            return total;
+        }
+    }
+
+    public virtual float TotalReduceReceiveDamageRate
+    {
+        get
+        {
+            var total = SumAddStats.reduceReceiveDamageRate;
+            return total;
         }
     }
 
@@ -447,6 +481,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             {
                 attackingActionId = -1;
                 usingSkillHotkeyId = -1;
+                isBlocking = false;
             }
         }
 
@@ -539,11 +574,14 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 inputMove += cameraRight * InputManager.GetAxis("Horizontal", false);
             }
 
+            // Bloacking
+            isBlocking = !IsDead && !isDashing && attackingActionId < 0 && usingSkillHotkeyId < 0 && isGrounded && InputManager.GetButton("Block");
+
             // Jump
             if (!IsDead && !inputJump)
                 inputJump = InputManager.GetButtonDown("Jump") && isGrounded && !isDashing;
 
-            if (!isDashing)
+            if (!isBlocking && !isDashing)
             {
                 UpdateInputDirection_TopDown(canAttack);
                 UpdateInputDirection_ThirdPerson(canAttack);
@@ -791,6 +829,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetFloat("MoveSpeed", 0);
             animator.SetBool("IsGround", true);
             animator.SetBool("IsDash", false);
+            animator.SetBool("IsBlock", false);
         }
         else
         {
@@ -802,6 +841,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetFloat("MoveSpeed", xzMagnitude);
             animator.SetBool("IsGround", Mathf.Abs(ySpeed) < 0.5f);
             animator.SetBool("IsDash", isDashing);
+            animator.SetBool("IsBlock", isBlocking);
         }
 
         if (weaponData != null)
@@ -844,7 +884,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             direction = direction.normalized;
         direction.y = 0;
 
-        var targetSpeed = GetMoveSpeed() * (isDashing ? dashMoveSpeedMultiplier : 1f);
+        var targetSpeed = GetMoveSpeed() * (isBlocking ? blockMoveSpeedMultiplier : (isDashing ? dashMoveSpeedMultiplier : 1f));
         CacheCharacterMovement.UpdateMovement(Time.deltaTime, targetSpeed, direction, inputJump);
     }
 
@@ -865,7 +905,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (!IsDead)
             Rotate(isDashing ? dashInputMove : inputDirection);
 
-        if (!IsDead)
+        if (!IsDead && !isBlocking)
         {
             if (inputAttack && GameplayManager.Singleton.CanAttack(this))
                 Attack();
@@ -897,6 +937,9 @@ public class CharacterEntity : BaseNetworkGameCharacter
 
     public void Attack()
     {
+        if (isPlayingAttackAnim || isBlocking)
+            return;
+
         if (attackingActionId < 0 && IsOwnerClient)
             CmdAttack();
     }
@@ -1027,7 +1070,15 @@ public class CharacterEntity : BaseNetworkGameCharacter
             return false;
 
         RpcEffect(attacker.ObjectId, type, dataId, actionId);
-        int reduceHp = damage - TotalDefend;
+
+        // Calculate damage and reduceHp
+        int reduceHp = (int)(damage + ((float)damage * TotalIncreaseDamageRate) - ((float)damage * TotalReduceReceiveDamageRate)) - TotalDefend;
+
+        // Blocking
+        if (isBlocking)
+            reduceHp -= Mathf.CeilToInt(damage * TotalBlockReduceDamageRate);
+
+        // Avoid increasing hp by damage
         if (reduceHp < 0)
             reduceHp = 0;
 
