@@ -70,7 +70,7 @@ public class IONetworkGameRule : BaseNetworkGameRule
             targetCharacter.level = 1;
             targetCharacter.statPoint = 0;
             targetCharacter.watchAdsCount = 0;
-            targetCharacter.addStats = new CharacterStats();
+            targetCharacter.attributeAmounts = new AttributeAmounts(0);
         }
         else
             ++targetCharacter.watchAdsCount;

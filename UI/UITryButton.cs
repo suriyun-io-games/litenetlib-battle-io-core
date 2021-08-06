@@ -40,7 +40,7 @@ public class UITryButton : MonoBehaviour
         {
             weaponData = uiProductData.productData as WeaponData;
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
-            var animator = characterModel.TempAnimator;
+            var animator = characterModel.CacheAnimator;
             animator.SetInteger("WeaponAnimId", weaponData.weaponAnimId);
         }
 

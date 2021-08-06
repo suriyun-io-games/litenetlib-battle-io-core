@@ -144,7 +144,7 @@ public class UIMainMenu : MonoBehaviour
 
         if (characterModel != null)
         {
-            var animator = characterModel.TempAnimator;
+            var animator = characterModel.CacheAnimator;
             switch (previewState)
             {
                 case PreviewState.Idle:
@@ -194,7 +194,7 @@ public class UIMainMenu : MonoBehaviour
         if (weaponData != null)
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
         characterModel.gameObject.SetActive(true);
-        var animator = characterModel.TempAnimator;
+        var animator = characterModel.CacheAnimator;
         animator.SetInteger("WeaponAnimId", weaponData != null ? weaponData.weaponAnimId : 0);
     }
 
@@ -211,7 +211,7 @@ public class UIMainMenu : MonoBehaviour
         if (characterModel != null && weaponData != null)
         {
             characterModel.SetWeaponModel(weaponData.rightHandObject, weaponData.leftHandObject, weaponData.shieldObject);
-            var animator = characterModel.TempAnimator;
+            var animator = characterModel.CacheAnimator;
             animator.SetInteger("WeaponAnimId", weaponData.weaponAnimId);
         }
     }

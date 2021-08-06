@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using LiteNetLibManager;
+using UnityEngine.Serialization;
 
 public class GameplayManager : LiteNetLibBehaviour
 {
@@ -19,10 +20,18 @@ public class GameplayManager : LiteNetLibBehaviour
     public IntAttribute rewardExp = new IntAttribute() { minValue = 8, maxValue = 409220, growth = 2.5f };
     public RewardCurrency[] rewardCurrencies;
     public IntAttribute killScore = new IntAttribute() { minValue = 10, maxValue = 511525, growth = 1f };
-    public int minHp = 100;
-    public int minAttack = 30;
-    public int minDefend = 20;
-    public int minMoveSpeed = 30;
+    [FormerlySerializedAs("minHp")]
+    public int baseHp = 100;
+    [FormerlySerializedAs("minAttack")]
+    public int baseAttack = 30;
+    [FormerlySerializedAs("minDefend")]
+    public int baseDefend = 20;
+    [FormerlySerializedAs("minDamage")]
+    public int baseDamage = 1;
+    [FormerlySerializedAs("minMoveSpeed")]
+    public int baseMoveSpeed = 30;
+    public float baseBlockReduceDamageRate = 0.3f;
+    public float maxBlockReduceDamageRate = 0.6f;
     public int maxSpreadDamages = 6;
     public bool divideSpreadedDamageAmount = false;
     public int addingStatPoint = 1;
@@ -36,8 +45,8 @@ public class GameplayManager : LiteNetLibBehaviour
     public SpawnArea[] characterSpawnAreas;
     public SpawnArea[] powerUpSpawnAreas;
     public PowerUpSpawnData[] powerUps;
-    public readonly Dictionary<string, PowerUpEntity> powerUpEntities = new Dictionary<string, PowerUpEntity>();
-    public readonly Dictionary<string, CharacterAttributes> attributes = new Dictionary<string, CharacterAttributes>();
+    public readonly Dictionary<string, PowerUpEntity> PowerUpEntities = new Dictionary<string, PowerUpEntity>();
+    public readonly Dictionary<int, CharacterAttributes> Attributes = new Dictionary<int, CharacterAttributes>();
     private bool isRegisteredPrefabs;
 
     private void Awake()
@@ -55,19 +64,19 @@ public class GameplayManager : LiteNetLibBehaviour
         if (isRegisteredPrefabs)
             return;
         isRegisteredPrefabs = true;
-        powerUpEntities.Clear();
+        PowerUpEntities.Clear();
         foreach (var powerUp in powerUps)
         {
             var powerUpPrefab = powerUp.powerUpPrefab;
             if (powerUpPrefab != null)
                 GameNetworkManager.Singleton.Assets.RegisterPrefab(powerUpPrefab.Identity);
-            if (powerUpPrefab != null && !powerUpEntities.ContainsKey(powerUpPrefab.name))
-                powerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
+            if (powerUpPrefab != null && !PowerUpEntities.ContainsKey(powerUpPrefab.name))
+                PowerUpEntities.Add(powerUpPrefab.name, powerUpPrefab);
         }
-        attributes.Clear();
+        Attributes.Clear();
         foreach (var availableAttribute in availableAttributes)
         {
-            attributes[availableAttribute.name] = availableAttribute;
+            Attributes[availableAttribute.GetHashId()] = availableAttribute;
         }
     }
 
@@ -93,7 +102,7 @@ public class GameplayManager : LiteNetLibBehaviour
         if (!IsServer || string.IsNullOrEmpty(prefabName))
             return;
         PowerUpEntity powerUpPrefab;
-        if (powerUpEntities.TryGetValue(prefabName, out powerUpPrefab))
+        if (PowerUpEntities.TryGetValue(prefabName, out powerUpPrefab))
         {
             var powerUpEntity = Instantiate(powerUpPrefab, position, Quaternion.identity);
             powerUpEntity.prefabName = prefabName;

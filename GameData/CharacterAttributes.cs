@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CharacterAttributes : ScriptableObject
 {
@@ -11,4 +9,8 @@ public class CharacterAttributes : ScriptableObject
     public int randomWeight;
     public CharacterStats stats;
     public WeaponData changingWeapon;
+    public int GetHashId()
+    {
+        return name.MakeHashId();
+    }
 }
