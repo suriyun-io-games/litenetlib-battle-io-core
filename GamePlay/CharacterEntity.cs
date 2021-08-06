@@ -127,13 +127,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField]
     public int watchAdsCount;
 
-    [SyncField(hook = "OnCharacterChanged")]
+    [SyncField(hook = nameof(OnCharacterChanged))]
     public int selectCharacter = 0;
 
-    [SyncField(hook = "OnHeadChanged")]
+    [SyncField(hook = nameof(OnHeadChanged))]
     public int selectHead = 0;
 
-    [SyncField(hook = "OnWeaponChanged")]
+    [SyncField(hook = nameof(OnWeaponChanged))]
     public int selectWeapon = 0;
 
     public SyncListInt selectCustomEquipments = new SyncListInt();
@@ -150,7 +150,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
     public sbyte usingSkillHotkeyId = -1;
 
-    [SyncField(hook = "OnAttributeAmountsChanged")]
+    [SyncField(hook = nameof(OnAttributeAmountsChanged), alwaysSync = true)]
     public AttributeAmounts attributeAmounts = new AttributeAmounts(0);
 
     [SyncField]
