@@ -89,11 +89,12 @@ public class BRGameplayManager : GameplayManager
     private float currentShrinkDuration;
     private float startShrinkRadius;
     private Vector3 startShrinkCenterPosition;
-    private BRPattern randomedPattern;
+    private BRPattern currentPattern;
     private bool isInSpawnableArea;
 
     public override void OnStartServer()
     {
+        currentPattern = patterns[Random.Range(0, patterns.Length)];
         currentCircle = 0;
         currentRadius = 0;
         currentState = BRState.WaitingForPlayers;
@@ -101,7 +102,6 @@ public class BRGameplayManager : GameplayManager
         CurrentCircleHpRateDps = 0;
         CurrentCountdown = 0;
         SpawnerMoveCountdown = 0;
-        randomedPattern = patterns[Random.Range(0, patterns.Length)];
         isInSpawnableArea = false;
         BRCharacterEntityExtra.BotSpawnDuration = 0f;
     }
@@ -196,9 +196,9 @@ public class BRGameplayManager : GameplayManager
                             continue;
                         SpawningCharacters.Add(character.GetComponent<BRCharacterEntityExtra>());
                     }
-                    spawnerMoveFrom = randomedPattern.spawnerMovement.GetFromPosition();
-                    spawnerMoveTo = randomedPattern.spawnerMovement.GetToPosition();
-                    spawnerMoveDuration = spawnerMoveCountdown = randomedPattern.spawnerMoveDuration;
+                    spawnerMoveFrom = currentPattern.spawnerMovement.GetFromPosition();
+                    spawnerMoveTo = currentPattern.spawnerMovement.GetToPosition();
+                    spawnerMoveDuration = spawnerMoveCountdown = currentPattern.spawnerMoveDuration;
                     if (gameRule != null)
                         gameRule.AddBots();
                     currentState = BRState.WaitingForFirstCircle;
@@ -325,9 +325,9 @@ public class BRGameplayManager : GameplayManager
     public bool TryGetCircle(int currentCircle, out BRCircle circle)
     {
         circle = new BRCircle();
-        if (currentCircle < 0 || currentCircle >= randomedPattern.circles.Length)
+        if (currentCircle < 0 || currentCircle >= currentPattern.circles.Length)
             return false;
-        circle = randomedPattern.circles[currentCircle];
+        circle = currentPattern.circles[currentCircle];
         return true;
     }
 
