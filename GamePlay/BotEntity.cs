@@ -93,7 +93,9 @@ public class BotEntity : CharacterEntity
 
         if (GameNetworkManager.Singleton.PlayersCount <= 0)
         {
+            isBlocking = false;
             attackingActionId = -1;
+            usingSkillHotkeyId = -1;
             return;
         }
 
@@ -202,10 +204,18 @@ public class BotEntity : CharacterEntity
         UpdateStatPoint();
     }
 
-    private void LateUpdate()
+    protected override void OnIsBlockingUpdated()
     {
         isBlocking = false;
+    }
+
+    protected override void OnAttackingActionIdUpdated()
+    {
         attackingActionId = -1;
+    }
+
+    protected override void OnUsingSkillHotkeyIdUpdated()
+    {
         usingSkillHotkeyId = -1;
     }
 
