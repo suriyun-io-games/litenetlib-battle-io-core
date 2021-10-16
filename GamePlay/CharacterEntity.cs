@@ -1403,6 +1403,8 @@ public class CharacterEntity : BaseNetworkGameCharacter
             if (GameplayManager.Singleton.Attributes.ContainsKey(id))
             {
                 attributeAmounts = attributeAmounts.Increase(id, 1);
+                if (GameplayManager.Singleton.Attributes[id].changingWeapon)
+                    selectWeapon = GameplayManager.Singleton.Attributes[id].changingWeapon.GetHashId();
                 --statPoint;
             }
         }
