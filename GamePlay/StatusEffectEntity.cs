@@ -1,59 +1,64 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 public class StatusEffectEntity : MonoBehaviour
 {
-    public int GetHashId()
-    {
-        return hashId;
-    }
-
-    [SerializeField]
-    private int hashId;
-
     [Range(0f, 1f)]
     public float applyRate = 1f;
     public int recoveryHpPerSeconds = 0;
     public CharacterStats addStats;
     public float lifeTime;
-    private CharacterEntity characterEntity;
+    private int hashId;
+    private CharacterEntity receiverCharacterEntity;
+    private CharacterEntity applierCharacterEntity;
+    private float startTime;
+    private bool destroyed;
 
     private void Start()
     {
-        if (lifeTime > 0)
+        if (lifeTime >= 0)
             Destroy(gameObject, lifeTime);
+        startTime = Time.unscaledTime;
     }
 
     private void OnDestroy()
     {
-        if (characterEntity && GameplayManager.Singleton.CanReceiveDamage(characterEntity, null))
-            characterEntity.RemoveAppliedStatusEffect(GetHashId());
+        if (receiverCharacterEntity)
+            receiverCharacterEntity.RemoveAppliedStatusEffect(GetHashId());
     }
 
-    private void OnValidate()
+    public int GetHashId()
     {
-#if UNITY_EDITOR
-        if (hashId != name.MakeHashId())
-        {
-            hashId = name.MakeHashId();
-            EditorUtility.SetDirty(this);
-        }
-#endif
+        return hashId;
+    }
+
+    public void SetHashId()
+    {
+        hashId = name.MakeHashId();
     }
 
     public void Recovery()
     {
-        if (characterEntity)
-            characterEntity.Hp += recoveryHpPerSeconds;
+        if (BaseNetworkGameManager.Singleton.IsMatchEnded)
+            return;
+        if (receiverCharacterEntity && receiverCharacterEntity.Hp > 0)
+        {
+            if (recoveryHpPerSeconds > 0 || GameplayManager.Singleton.CanReceiveDamage(receiverCharacterEntity, applierCharacterEntity))
+                receiverCharacterEntity.Hp += recoveryHpPerSeconds;
+            if (receiverCharacterEntity.Hp <= 0)
+            {
+                if (applierCharacterEntity)
+                    applierCharacterEntity.KilledTarget(receiverCharacterEntity);
+                Destroy(gameObject);
+            }
+        }
     }
 
-    public void Applied(CharacterEntity characterEntity)
+    public void Applied(CharacterEntity receiverCharacterEntity, CharacterEntity applierCharacterEntity)
     {
-        this.characterEntity = characterEntity;
-        InvokeRepeating("Recovery", 0, 1);
+        this.receiverCharacterEntity = receiverCharacterEntity;
+        this.applierCharacterEntity = applierCharacterEntity;
+        InvokeRepeating(nameof(Recovery), 0, 1);
     }
 }

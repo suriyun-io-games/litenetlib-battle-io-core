@@ -41,8 +41,8 @@ public class SkillData : ScriptableObject
 
         attacker.RpcEffect(attacker.ObjectId, CharacterEntity.RPC_EFFECT_SKILL_SPAWN, GetHashId(), 0);
 
-        if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(attacker, null))
-            attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
+        if (attacker.IsServer && statusEffectPrefab && Random.value <= statusEffectPrefab.applyRate && GameplayManager.Singleton.CanApplyStatusEffect(attacker, null))
+            attacker.RpcApplyStatusEffect(statusEffectPrefab.GetHashId(), attacker.Identity.ObjectId);
 
         if (!damagePrefab)
             return;

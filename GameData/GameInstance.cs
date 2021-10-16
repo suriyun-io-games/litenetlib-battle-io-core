@@ -67,6 +67,7 @@ public class GameInstance : BaseNetworkGameInstance
         }
 
         Weapons.Clear();
+        List<StatusEffectEntity> allStatusEffects = new List<StatusEffectEntity>();
         foreach (var weapon in weapons)
         {
             if (!weapon) continue;
@@ -76,10 +77,11 @@ public class GameInstance : BaseNetworkGameInstance
             foreach (var attackAnimation in weapon.attackAnimations)
             {
                 if (attackAnimation.damagePrefab && attackAnimation.damagePrefab && attackAnimation.damagePrefab.statusEffectPrefab)
-                    AddStatusEffectEntities(new StatusEffectEntity[] { attackAnimation.damagePrefab.statusEffectPrefab });
+                    allStatusEffects.Add(attackAnimation.damagePrefab.statusEffectPrefab);
             }
             Weapons[weapon.GetHashId()] = weapon;
         }
+        AddStatusEffectEntities(allStatusEffects.ToArray());
 
         CustomEquipments.Clear();
         foreach (var customEquipment in customEquipments)
@@ -97,17 +99,19 @@ public class GameInstance : BaseNetworkGameInstance
     public void AddSkills(SkillData[] skills)
     {
         if (skills == null) return;
+        List<StatusEffectEntity> allStatusEffects = new List<StatusEffectEntity>();
         foreach (var skill in skills)
         {
             if (!skill) continue;
             if (skill.statusEffectPrefab)
-                AddStatusEffectEntities(new StatusEffectEntity[] { skill.statusEffectPrefab });
+                allStatusEffects.Add(skill.statusEffectPrefab);
             if (skill.damagePrefab && skill.damagePrefab.statusEffectPrefab)
-                AddStatusEffectEntities(new StatusEffectEntity[] { skill.damagePrefab.statusEffectPrefab });
+                allStatusEffects.Add(skill.damagePrefab.statusEffectPrefab);
             if (skill.attackAnimation.damagePrefab && skill.attackAnimation.damagePrefab && skill.attackAnimation.damagePrefab.statusEffectPrefab)
-                AddStatusEffectEntities(new StatusEffectEntity[] { skill.attackAnimation.damagePrefab.statusEffectPrefab });
+                allStatusEffects.Add(skill.attackAnimation.damagePrefab.statusEffectPrefab);
             Skills[skill.GetHashId()] = skill;
         }
+        AddStatusEffectEntities(allStatusEffects.ToArray());
     }
 
     public void AddStatusEffectEntities(StatusEffectEntity[] statusEffectEntities)
@@ -116,6 +120,7 @@ public class GameInstance : BaseNetworkGameInstance
         foreach (var statusEffectEntity in statusEffectEntities)
         {
             if (!statusEffectEntity) continue;
+            statusEffectEntity.SetHashId();
             StatusEffects[statusEffectEntity.GetHashId()] = statusEffectEntity;
         }
     }

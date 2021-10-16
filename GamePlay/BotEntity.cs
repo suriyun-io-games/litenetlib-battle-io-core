@@ -153,14 +153,13 @@ public class BotEntity : CharacterEntity
             lookingPosition = enemy.CacheTransform.position;
         }
 
-        attackingActionId = -1;
         if (enemy != null)
         {
             switch (characteristic)
             {
                 case Characteristic.Aggressive:
                     if (Time.unscaledTime - lastAttackTime >= attackDuration &&
-                    Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
+                        Vector3.Distance(enemy.CacheTransform.position, CacheTransform.position) < GetAttackRange())
                     {
                         // Attack when nearby enemy
                         sbyte usingSkillHotkeyId;
@@ -188,10 +187,7 @@ public class BotEntity : CharacterEntity
 
         // Gets a vector that points from the player's position to the target's.
         isReachedTarget = IsReachedTargetPosition();
-        if (!isReachedTarget)
-        {
-            Move(isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized);
-        }
+        Move(isReachedTarget ? Vector3.zero : (isDashing ? dashDirection : (targetPosition - CacheTransform.position).normalized));
 
         if (isReachedTarget)
         {
@@ -204,6 +200,13 @@ public class BotEntity : CharacterEntity
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
         UpdateStatPoint();
+    }
+
+    private void LateUpdate()
+    {
+        isBlocking = false;
+        attackingActionId = -1;
+        usingSkillHotkeyId = -1;
     }
 
     void OnDrawGizmos()

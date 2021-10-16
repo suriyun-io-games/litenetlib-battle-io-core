@@ -7,7 +7,6 @@ using UnityEngine.EventSystems;
 using static LiteNetLibManager.LiteNetLibSyncList;
 
 [RequireComponent(typeof(LiteNetLibTransform))]
-[RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(CharacterMovement))]
 public class CharacterEntity : BaseNetworkGameCharacter
 {
@@ -237,7 +236,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
     }
 
     public Transform CacheTransform { get; private set; }
-    public Rigidbody CacheRigidbody { get; private set; }
     public CharacterMovement CacheCharacterMovement { get; private set; }
     public LiteNetLibTransform CacheNetTransform { get; private set; }
 
@@ -419,8 +417,6 @@ public class CharacterEntity : BaseNetworkGameCharacter
         selectCustomEquipments.onOperation = OnCustomEquipmentsChanged;
         gameObject.layer = GameInstance.Singleton.characterLayer;
         CacheTransform = transform;
-        CacheRigidbody = gameObject.GetOrAddComponent<Rigidbody>();
-        CacheRigidbody.useGravity = false;
         CacheCharacterMovement = gameObject.GetOrAddComponent<CharacterMovement>();
         CacheNetTransform = gameObject.GetOrAddComponent<LiteNetLibTransform>();
         CacheNetTransform.ownerClientCanSendTransform = true;
@@ -844,9 +840,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
             animator.SetBool("IsBlock", isBlocking);
         }
 
-        if (weaponData != null)
-            animator.SetInteger("WeaponAnimId", weaponData.weaponAnimId);
-
+        animator.SetInteger("WeaponAnimId", weaponData != null ? weaponData.weaponAnimId : 0);
         animator.SetBool("IsIdle", !animator.GetBool("IsDead") && !animator.GetBool("DoAction") && animator.GetBool("IsGround"));
 
         if (attackingActionId >= 0 && usingSkillHotkeyId < 0 && !isPlayingAttackAnim)
@@ -1326,6 +1320,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
         if (defaultSelectWeapon != 0)
             selectWeapon = defaultSelectWeapon;
         isPlayingAttackAnim = false;
+        isPlayingUseSkillAnim = false;
         isDead = false;
         Hp = TotalHp;
         holdingUseSkillHotkeyId = -1;
@@ -1425,41 +1420,44 @@ public class CharacterEntity : BaseNetworkGameCharacter
         RpcDash();
     }
 
-    public void RpcApplyStatusEffect(int dataId)
+    public void RpcApplyStatusEffect(int dataId, uint applierId)
     {
-        CallNetFunction(_RpcApplyStatusEffect, FunctionReceivers.All, dataId);
+        CallNetFunction(_RpcApplyStatusEffect, FunctionReceivers.All, dataId, applierId);
     }
 
     [NetFunction]
-    protected void _RpcApplyStatusEffect(int dataId)
+    protected void _RpcApplyStatusEffect(int dataId, uint applierId)
     {
         // Destroy applied status effect, because it cannot be stacked
-        RemoveAppliedStatusEffect(dataId);
         StatusEffectEntity statusEffect;
-        if (GameInstance.StatusEffects.TryGetValue(dataId, out statusEffect) && Random.value <= statusEffect.applyRate)
-        {
-            refreshingSumAddStats = true;
-            // Found prefab, instantiates to character
-            statusEffect = Instantiate(statusEffect, transform.position, transform.rotation, transform);
-            // Just in case the game object might be not activated by default
-            statusEffect.gameObject.SetActive(true);
-            // Set applying character
-            statusEffect.Applied(this);
-            // Add to applied status effects
-            appliedStatusEffects[dataId] = statusEffect;
-        }
+        if (!GameInstance.StatusEffects.TryGetValue(dataId, out statusEffect))
+            return;
+        RemoveAppliedStatusEffect(dataId);
+        // Find applier
+        CharacterEntity applier = null;
+        LiteNetLibIdentity applierView;
+        if (Manager.Assets.TryGetSpawnedObject(applierId, out applierView))
+            applier = applierView.GetComponent<CharacterEntity>();
+        refreshingSumAddStats = true;
+        // Found prefab, instantiates to character
+        statusEffect = Instantiate(statusEffect, transform.position, transform.rotation, transform);
+        // Just in case the game object might be not activated by default
+        statusEffect.gameObject.SetActive(true);
+        // Set applying character
+        statusEffect.Applied(this, applier);
+        // Add to applied status effects
+        appliedStatusEffects[dataId] = statusEffect;
     }
 
     public void RemoveAppliedStatusEffect(int dataId)
     {
         StatusEffectEntity statusEffect;
-        if (appliedStatusEffects.TryGetValue(dataId, out statusEffect))
-        {
-            refreshingSumAddStats = true;
-            appliedStatusEffects.Remove(dataId);
-            if (statusEffect)
-                Destroy(statusEffect.gameObject);
-        }
+        if (!appliedStatusEffects.TryGetValue(dataId, out statusEffect))
+            return;
+        refreshingSumAddStats = true;
+        appliedStatusEffects.Remove(dataId);
+        if (statusEffect)
+            Destroy(statusEffect.gameObject);
     }
 
     public void RpcEffect(uint triggerId, byte effectType, int dataId, byte actionId)

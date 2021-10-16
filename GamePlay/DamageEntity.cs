@@ -25,6 +25,7 @@ public class DamageEntity : MonoBehaviour
     private float addRotationX;
     private float addRotationY;
     private float? colliderExtents;
+    private HashSet<uint> appliedIDs = new HashSet<uint>();
     public int weaponDamage { get; set; }
     public byte hitEffectType { get; set; }
     public int relateDataId { get; set; }
@@ -108,7 +109,7 @@ public class DamageEntity : MonoBehaviour
                 }
                 var baseAngles = attacker.CacheTransform.eulerAngles;
                 CacheTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
-                CacheRigidbody.velocity = Attacker.CacheRigidbody.velocity + GetForwardVelocity();
+                CacheRigidbody.velocity = Attacker.CacheCharacterMovement.CacheCharacterController.velocity + GetForwardVelocity();
             }
             else
                 CacheRigidbody.velocity = GetForwardVelocity();
@@ -194,14 +195,17 @@ public class DamageEntity : MonoBehaviour
 
     private void ApplyDamage(CharacterEntity target)
     {
+        if (appliedIDs.Contains(target.Identity.ObjectId))
+            return;
         // Damage receiving calculation on server only
         if (GameNetworkManager.Singleton.IsServer)
         {
+            appliedIDs.Add(target.Identity.ObjectId);
             target.ReceiveDamage(Attacker, weaponDamage, hitEffectType, relateDataId, actionId);
-            if (statusEffectPrefab && GameplayManager.Singleton.CanApplyStatusEffect(target, Attacker))
-                target.RpcApplyStatusEffect(statusEffectPrefab.GetHashId());
+            if (statusEffectPrefab && Random.value <= statusEffectPrefab.applyRate && GameplayManager.Singleton.CanApplyStatusEffect(target, Attacker))
+                target.RpcApplyStatusEffect(statusEffectPrefab.GetHashId(), Attacker.Identity.ObjectId);
         }
-        target.CacheRigidbody.AddExplosionForce(explosionForce, CacheTransform.position, explosionForceRadius);
+        target.CacheCharacterMovement.AddExplosionForce(CacheTransform.position, explosionForce, explosionForceRadius);
     }
 
     private float GetColliderExtents()

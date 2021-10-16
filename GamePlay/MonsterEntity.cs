@@ -173,7 +173,6 @@ public class MonsterEntity : CharacterEntity
         if (Hp <= 0)
         {
             ServerRespawn(false);
-            CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
             return;
         }
 
@@ -235,7 +234,6 @@ public class MonsterEntity : CharacterEntity
             lookingPosition = enemy.CacheTransform.position;
         }
 
-        attackingActionId = -1;
         if (enemy != null)
         {
             switch (characteristic)
@@ -248,9 +246,7 @@ public class MonsterEntity : CharacterEntity
                         // Attack when nearby enemy
                         sbyte usingSkillHotkeyId;
                         if (RandomUseSkill(out usingSkillHotkeyId))
-                        {
                             this.usingSkillHotkeyId = usingSkillHotkeyId;
-                        }
                         else
                             attackingActionId = weaponData.GetRandomAttackAnimation().actionId;
                         lastAttackTime = Time.unscaledTime;
@@ -261,13 +257,11 @@ public class MonsterEntity : CharacterEntity
 
         // Gets a vector that points from the player's position to the target's.
         var isReachedTarget = IsReachedTargetPosition();
-        if (!isReachedTarget)
-            Move((targetPosition - CacheTransform.position).normalized);
+        Move(isReachedTarget ? Vector3.zero : (targetPosition - CacheTransform.position).normalized);
 
         if (isReachedTarget)
         {
             targetPosition = CacheTransform.position + (CacheTransform.forward * ReachedTargetDistance / 2f);
-            CacheRigidbody.velocity = new Vector3(0, CacheRigidbody.velocity.y, 0);
             if (navPaths.Count > 0)
                 targetPosition = navPaths.Dequeue();
         }
@@ -275,6 +269,13 @@ public class MonsterEntity : CharacterEntity
         var rotateHeading = lookingPosition - CacheTransform.position;
         var targetRotation = Quaternion.LookRotation(rotateHeading);
         CacheTransform.rotation = Quaternion.Lerp(CacheTransform.rotation, Quaternion.Euler(0, targetRotation.eulerAngles.y, 0), Time.deltaTime * turnSpeed);
+    }
+
+    private void LateUpdate()
+    {
+        isBlocking = false;
+        attackingActionId = -1;
+        usingSkillHotkeyId = -1;
     }
 
     void OnDrawGizmos()
