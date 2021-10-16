@@ -65,7 +65,7 @@ public class BRGameplayManager : GameplayManager
     public BRState currentState;
     [SyncField]
     public float currentDuration;
-    [SyncField(hook = "OnCurrentCountdownChanged")]
+    [SyncField(onChangeMethodName = nameof(OnCurrentCountdownChanged))]
     public float currentCountdown;
     [SyncField]
     public Vector3 spawnerMoveFrom;
@@ -73,7 +73,7 @@ public class BRGameplayManager : GameplayManager
     public Vector3 spawnerMoveTo;
     [SyncField]
     public float spawnerMoveDuration;
-    [SyncField(hook = "OnSpawnerMoveCountdownChanged")]
+    [SyncField(onChangeMethodName = nameof(OnSpawnerMoveCountdownChanged))]
     public float spawnerMoveCountdown;
     [SyncField]
     public int countAliveCharacters;
