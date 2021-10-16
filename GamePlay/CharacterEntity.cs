@@ -126,13 +126,13 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField]
     public int watchAdsCount;
 
-    [SyncField(hook = nameof(OnCharacterChanged))]
+    [SyncField(onChangeMethodName = nameof(OnCharacterChanged))]
     public int selectCharacter = 0;
 
-    [SyncField(hook = nameof(OnHeadChanged))]
+    [SyncField(onChangeMethodName = nameof(OnHeadChanged))]
     public int selectHead = 0;
 
-    [SyncField(hook = nameof(OnWeaponChanged))]
+    [SyncField(onChangeMethodName = nameof(OnWeaponChanged))]
     public int selectWeapon = 0;
 
     public SyncListInt selectCustomEquipments = new SyncListInt();
@@ -140,16 +140,16 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField]
     public bool isInvincible;
 
-    [SyncField]
+    [SyncField(onUpdateMethodName = nameof(OnIsBlockingUpdated))]
     public bool isBlocking;
 
-    [SyncField, Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
+    [SyncField(onUpdateMethodName = nameof(OnAttackingActionIdUpdated)), Tooltip("If this value >= 0 it's means character is attacking, so set it to -1 to stop attacks")]
     public short attackingActionId = -1;
 
-    [SyncField, Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
+    [SyncField(onUpdateMethodName = nameof(OnUsingSkillHotkeyIdUpdated)), Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
     public sbyte usingSkillHotkeyId = -1;
 
-    [SyncField(hook = nameof(OnAttributeAmountsChanged), alwaysSync = true)]
+    [SyncField(onChangeMethodName = nameof(OnAttributeAmountsChanged), alwaysSync = true)]
     public AttributeAmounts attributeAmounts = new AttributeAmounts(0);
 
     [SyncField]
@@ -799,7 +799,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
                 Vector3 lookAtCharacterPosition = targetCamera.ScreenToWorldPoint(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, distanceToCharacter));
                 Vector3 lookAtTargetPosition = targetCamera.ScreenToWorldPoint(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, distanceToTarget));
                 aimPosition = lookAtTargetPosition;
-                RaycastHit[] hits =Physics.RaycastAll(lookAtCharacterPosition, (lookAtTargetPosition- lookAtCharacterPosition).normalized, attackDist);
+                RaycastHit[] hits = Physics.RaycastAll(lookAtCharacterPosition, (lookAtTargetPosition - lookAtCharacterPosition).normalized, attackDist);
                 for (int i = 0; i < hits.Length; ++i)
                 {
                     if (hits[i].transform.root != transform.root)
@@ -1252,6 +1252,21 @@ public class CharacterEntity : BaseNetworkGameCharacter
         }
         UpdateCharacterModelHiddingState();
         UpdateSkills();
+    }
+
+    protected virtual void OnIsBlockingUpdated()
+    {
+
+    }
+
+    protected virtual void OnAttackingActionIdUpdated()
+    {
+
+    }
+
+    protected virtual void OnUsingSkillHotkeyIdUpdated()
+    {
+
     }
 
     protected virtual void OnAttributeAmountsChanged(AttributeAmounts value)
