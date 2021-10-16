@@ -16,6 +16,7 @@ public class WeaponData : ItemData
     public AudioClip[] attackFx;
     public int weaponAnimId;
     public readonly Dictionary<short, AttackAnimation> AttackAnimations = new Dictionary<short, AttackAnimation>();
+    private HashSet<long> launchedConnectionIds = new HashSet<long>();
 
     public void Launch(CharacterEntity attacker, Vector3 targetPosition, byte actionId)
     {
@@ -64,11 +65,16 @@ public class WeaponData : ItemData
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
 
+            launchedConnectionIds.Clear();
             foreach (var characterCollider in characterColliders)
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity) && !(character is MonsterEntity))
+                {
+                    if (launchedConnectionIds.Contains(character.ConnectionId)) continue;
+                    launchedConnectionIds.Add(character.ConnectionId);
                     GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, 0, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
+                }
             }
             addRotationY += addingRotationY;
         }

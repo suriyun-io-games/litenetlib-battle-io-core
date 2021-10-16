@@ -33,6 +33,7 @@ public class SkillData : ScriptableObject
     public float coolDown = 3;
     [Header("SFX")]
     public AudioClip[] attackFx;
+    private HashSet<long> launchedConnectionIds = new HashSet<long>();
 
     public void Launch(CharacterEntity attacker, Vector3 targetPosition)
     {
@@ -81,11 +82,16 @@ public class SkillData : ScriptableObject
             msg.addRotationX = addRotationX;
             msg.addRotationY = addRotationY;
 
+            launchedConnectionIds.Clear();
             foreach (var characterCollider in characterColliders)
             {
                 var character = characterCollider.GetComponent<CharacterEntity>();
                 if (character != null && !(character is BotEntity) && !(character is MonsterEntity))
+                {
+                    if (launchedConnectionIds.Contains(character.ConnectionId)) continue;
+                    launchedConnectionIds.Add(character.ConnectionId);
                     GameNetworkManager.Singleton.ServerSendPacket(character.ConnectionId, 0, DeliveryMethod.ReliableOrdered, msg.OpId, msg);
+                }
             }
             addRotationY += addingRotationY;
         }
