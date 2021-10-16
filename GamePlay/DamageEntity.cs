@@ -109,13 +109,9 @@ public class DamageEntity : MonoBehaviour
                 }
                 var baseAngles = attacker.CacheTransform.eulerAngles;
                 CacheTransform.rotation = Quaternion.Euler(baseAngles.x + addRotationX, baseAngles.y + addRotationY, baseAngles.z);
-                CacheRigidbody.velocity = Attacker.CacheCharacterMovement.CacheCharacterController.velocity + GetForwardVelocity();
             }
-            else
-                CacheRigidbody.velocity = GetForwardVelocity();
         }
-        else
-            CacheRigidbody.velocity = GetForwardVelocity();
+        CacheRigidbody.velocity = GetForwardVelocity();
     }
 
     private void OnDestroy()
