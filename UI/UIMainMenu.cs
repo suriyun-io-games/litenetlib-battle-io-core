@@ -25,6 +25,7 @@ public class UIMainMenu : MonoBehaviour
     public Text textSpreadDamages;
     public InputField inputName;
     public Transform characterModelTransform;
+    public bool saveImmediatelyOnSelectItem = true;
     public string onlineNetworkAddress;
     public int onlineNetworkPort;
     public UIEnterNetworkAddress enterNetworkAddressDialog;
@@ -110,7 +111,11 @@ public class UIMainMenu : MonoBehaviour
 
     private IEnumerator StartRoutine()
     {
-        yield return null;
+        // Wait until player save validated
+        while (!GameInstance.Singleton.PlayerSaveValidated)
+        {
+            yield return null;
+        }
         OnClickLoadData();
         readyToUpdate = true;
     }
@@ -225,31 +230,43 @@ public class UIMainMenu : MonoBehaviour
     public void OnClickBackCharacter()
     {
         --SelectCharacter;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnClickNextCharacter()
     {
         ++SelectCharacter;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnClickBackHead()
     {
         --SelectHead;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnClickNextHead()
     {
         ++SelectHead;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnClickBackWeapon()
     {
         --SelectWeapon;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnClickNextWeapon()
     {
         ++SelectWeapon;
+        if (saveImmediatelyOnSelectItem)
+            OnClickSaveData();
     }
 
     public void OnInputNameChanged(string eventInput)

@@ -29,6 +29,9 @@ public class GameInstance : BaseNetworkGameInstance
     public static readonly Dictionary<int, CustomEquipmentData> CustomEquipments = new Dictionary<int, CustomEquipmentData>();
     public static readonly Dictionary<int, SkillData> Skills = new Dictionary<int, SkillData>();
     public static readonly Dictionary<int, StatusEffectEntity> StatusEffects = new Dictionary<int, StatusEffectEntity>();
+
+    public bool PlayerSaveValidated { get; protected set; } = false;
+
     protected override void Awake()
     {
         base.Awake();
@@ -91,9 +94,16 @@ public class GameInstance : BaseNetworkGameInstance
                 AddSkills(customEquipment.skills);
             CustomEquipments[customEquipment.GetHashId()] = customEquipment;
         }
+    }
 
+    private void LateUpdate()
+    {
         UpdateAvailableItems();
-        ValidatePlayerSave();
+        if (!PlayerSaveValidated && MonetizationManager.Save.IsPurchasedItemsLoaded)
+        {
+            PlayerSaveValidated = true;
+            ValidatePlayerSave();
+        }
     }
 
     public void AddSkills(SkillData[] skills)
