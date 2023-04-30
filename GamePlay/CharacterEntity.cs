@@ -149,7 +149,7 @@ public class CharacterEntity : BaseNetworkGameCharacter
     [SyncField(onUpdateMethodName = nameof(OnUsingSkillHotkeyIdUpdated)), Tooltip("If this value >= 0 it's means character is using skill, so set it to -1 to stop skills")]
     public sbyte usingSkillHotkeyId = -1;
 
-    [SyncField(onChangeMethodName = nameof(OnAttributeAmountsChanged), alwaysSync = true)]
+    [SyncField(onChangeMethodName = nameof(OnAttributeAmountsChanged), syncBehaviour = LiteNetLibSyncField.SyncBehaviour.AlwaysSync)]
     public AttributeAmounts attributeAmounts = new AttributeAmounts(0);
 
     [SyncField]
